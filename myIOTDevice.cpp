@@ -23,16 +23,8 @@
 #include <rom/rtc.h>
 
 
-#ifndef DEFAULT_DEVICE_WIFI
-    #define DEFAULT_DEVICE_WIFI 1
-#endif
-
 #if WITH_MQTT
     #include "myIOTMQTT.h"
-#endif
-
-#if WITH_POWER
-    #include "myIOTPower.h"
 #endif
 
 #if WITH_SD
@@ -61,10 +53,6 @@
 static valueIdType device_items[] = {
     ID_REBOOT,
     ID_DEVICE_NAME,
-#if WITH_POWER
-    ID_DEVICE_VOLTS,
-    ID_DEVICE_AMPS,
-#endif
     ID_DEBUG_LEVEL,
     ID_LOG_LEVEL,
     ID_DEVICE_WIFI,
@@ -148,10 +136,6 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
 #endif
 #if WITH_BASIC_OTA
     { ID_OTA_PASS,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   DEFAULT_OTA_PASSWORD },
-#endif
-#if WITH_POWER
-    { ID_DEVICE_VOLTS,  VALUE_TYPE_FLOAT,      VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   NULL,                       NULL,   { .float_range = { 0.00, -50.00, 50.00 }} },
-    { ID_DEVICE_AMPS,   VALUE_TYPE_FLOAT,      VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   NULL,                       NULL,   { .float_range = { 0.00, -300.00, 300.00 }} },
 #endif
 };
 
@@ -459,10 +443,6 @@ void myIOTDevice::setup()
         my_iot_mqtt.setup();
     #endif
 
-    #if WITH_POWER
-        initPower();
-    #endif
-
     myIOTSerial::begin();
 
     // everything after wifi setup is encapsulated in the
@@ -726,13 +706,7 @@ void myIOTDevice::loop()
         #endif
     }
 
-
     myIOTSerial::loop();
-
-    #if WITH_POWER
-        powerLoop();
-    #endif
-
 
     static bool last_has_power = false;
     bool has_power = digitalRead(PIN_POWER_SENSE);

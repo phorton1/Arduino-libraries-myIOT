@@ -6,6 +6,22 @@
 #include "myIOTDevice.h" // for WITH_TELNET type and hasSD() method
 #include <stdio.h>
 
+// Logging Compile Time Preferences
+
+#ifndef LOG_ANSI_COLORS
+    #define LOG_ANSI_COLORS     0
+#endif
+
+#ifndef LOG_TIMESTAMP
+    #define LOG_TIMESTAMP       1
+#endif
+
+#ifndef LOG_MEM_LEVELS
+    #define LOG_MEM_LEVELS      1
+#endif
+
+
+
 #if WITH_SD
 	#include <SD.h>
 	#include <FS.h>
@@ -16,14 +32,15 @@
     #include <ESPTelnet.h>
 #endif
 
-
-#define MSG_COLOR_WHITE         "\033[97m"       // bright white
-#define MSG_COLOR_GREEN         "\033[92m"       // bright green
-#define MSG_COLOR_YELLOW        "\033[93m"       // yellow
-#define MSG_COLOR_RED           "\033[91m"       // red
-#define MSG_COLOR_CYAN          "\033[96m"       // bright cyan
-#define MSG_COLOR_MAGENTA       "\033[95m"       // magenta
-#define MSG_COLOR_LIGHT_GREY    "\033[37m"       // light_grey
+#if LOG_ANSI_COLORS
+	#define MSG_COLOR_WHITE         "\033[97m"       // bright white
+	#define MSG_COLOR_GREEN         "\033[92m"       // bright green
+	#define MSG_COLOR_YELLOW        "\033[93m"       // yellow
+	#define MSG_COLOR_RED           "\033[91m"       // red
+	#define MSG_COLOR_CYAN          "\033[96m"       // bright cyan
+	#define MSG_COLOR_MAGENTA       "\033[95m"       // magenta
+	#define MSG_COLOR_LIGHT_GREY    "\033[37m"       // light_grey
+#endif
 
 uint32_t iot_log_level = LOG_LEVEL_INFO;
 uint32_t iot_debug_level = LOG_LEVEL_DEBUG;
@@ -51,7 +68,6 @@ static bool logfile_error = 0;
 
 
 
-
 static int mycat(char *buf, const char *str, char **end)
 {
 	int len = strlen(str);
@@ -68,46 +84,42 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 		return;
 
 	#define MAX_BUFFER  255
-	char display_buf[MAX_BUFFER+1];
-
-	const char *color = MSG_COLOR_LIGHT_GREY;    // default == LOG_LEVEL_USER
-	switch (level)
-	{
-		case LOG_LEVEL_ERROR   : color = MSG_COLOR_RED; break;
-		case LOG_LEVEL_WARNING : color = MSG_COLOR_YELLOW; break;
-		case LOG_LEVEL_INFO    : color = MSG_COLOR_GREEN; break;
-		case LOG_LEVEL_DEBUG   : color = MSG_COLOR_CYAN; break;
-	}
-
-    char *end;
-	char *raw_buf;
-	mycat(display_buf,color,&raw_buf);
-
-	String tm = timeToString(time(NULL));
-	tm += " ";
-	mycat(raw_buf,tm.c_str(),&end);
-
 
 	int len = 0;
-	if (0)		// debugging to show sequence numbers, sometimes messages are out of order
-	{
-		static volatile int msg_num = 0;
-		msg_num++;
-		len = mycat(end,String(msg_num).c_str(),&end);
-	}
-	else
-	{
+	char display_buf[MAX_BUFFER+1];		// buffer including color sequence
+	char *raw_buf = display_buf;		// after color sequence
+    char *end = display_buf;			// next position to write at
+
+	#if LOG_ANSI_COLORS
+		const char *color = MSG_COLOR_LIGHT_GREY;    // default == LOG_LEVEL_USER
+		switch (level)
+		{
+			case LOG_LEVEL_ERROR   : color = MSG_COLOR_RED; break;
+			case LOG_LEVEL_WARNING : color = MSG_COLOR_YELLOW; break;
+			case LOG_LEVEL_INFO    : color = MSG_COLOR_GREEN; break;
+			case LOG_LEVEL_DEBUG   : color = MSG_COLOR_CYAN; break;
+		}
+		mycat(display_buf,color,&raw_buf);
+	#endif
+
+	#if LOG_TIMESTAMP
+		String tm = timeToString(time(NULL));
+		tm += " ";
+		mycat(raw_buf,tm.c_str(),&end);
+	#endif
+
+	#if LOG_MEM_LEVELS
 		uint32_t mem_free = xPortGetFreeHeapSize() / 1024;
 		uint32_t mem_min = xPortGetMinimumEverFreeHeapSize() / 1024;
 		len = mycat(end,String(mem_free).c_str(),&end);
 		len += mycat(end,":",&end);
 		len += mycat(end,String(mem_min).c_str(),&end);
-	}
-	while (len < 10)
-	{
-		strcpy(end++," ");
-		len++;
-	}
+		while (len < 10)
+		{
+			strcpy(end++," ");
+			len++;
+		}
+	#endif
 
 	// Serial.println(display_buf);
 	// return;
@@ -139,7 +151,9 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 	{
 		strcpy(end,"\n");
 		end++;
-		strcpy(end,MSG_COLOR_LIGHT_GREY);
+		#if LOG_ANSI_COLORS
+			strcpy(end,MSG_COLOR_LIGHT_GREY);
+		#endif
 		// end now points to the terminating pointer so we can set it
 		// to zero to write to logfile
 	}

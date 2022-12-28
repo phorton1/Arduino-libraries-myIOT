@@ -15,12 +15,9 @@
 // I can modify this at compile time via /base/bat/setup_platform.pm
 
 #ifndef WITH_SD
-    #define WITH_SD     1
+    #define WITH_SD     0
 #endif
 
-#ifndef WITH_POWER
-    #define WITH_POWER  0
-#endif
 
 #ifndef WITH_WS
     #define WITH_WS     1
@@ -31,15 +28,15 @@
 #endif
 
 #ifndef WITH_TELNET
-    #define WITH_TELNET 1
+    #define WITH_TELNET 0
 #endif
 
 #ifndef WITH_NTP
-    #define WITH_NTP    1
+    #define WITH_NTP    0
 #endif
 
-#ifndef DEFAULT_IOT_WIFI
-    #define DEFAULT_IOT_WIFI   1
+#ifndef DEFAULT_DEVICE_WIFI
+    #define DEFAULT_DEVICE_WIFI 0
 #endif
 
 #ifndef WITH_BASIC_OTA
@@ -106,7 +103,7 @@
 
 
 #define VALUE_STORE_PROG      0x00      // only in ESP32 memory (or not anywhere at all)
-#define VALUE_STORE_NVS       0x01      // stored/retrieved from NVS
+#define VALUE_STORE_NVS       0x01      // stored/retrieved from NVS (EEPROM)
 #define VALUE_STORE_WS        0x02      // broadcast to / received from WebSockets
 #define VALUE_STORE_MQTT_PUB  0x04      // published to (the) MQTT broker
 #define VALUE_STORE_MQTT_SUB  0x08      // subscribed to from (the) MQTT broker
@@ -116,17 +113,17 @@
 #define VALUE_STORE_PREF      (VALUE_STORE_NVS | VALUE_STORE_WS)
 #define VALUE_STORE_TOPIC     (VALUE_STORE_MQTT_PUB | VALUE_STORE_MQTT_SUB | VALUE_STORE_WS)
 #define VALUE_STORE_PUB       (VALUE_STORE_MQTT_PUB | VALUE_STORE_WS)
-    // putlish only topic, also to WS - used for items only stored in RAM or RTC memory
+    // publish only topic, also to WS - used for items only stored in RAM or RTC memory
 
 
 #define VALUE_STYLE_NONE        0x0000      // no special styling
 #define VALUE_STYLE_READONLY    0x0001      // Value may not be modified except by PROG
 #define VALUE_STYLE_REQUIRED    0x0002      // String item may not be blank
 #define VALUE_STYLE_PASSWORD    0x0004      // displayed as '********', protected in debugging, etc. Gets "retype" dialog in UI
-#define VALUE_STYLE_TIME_SINCE  0x0008      // ui shows '23 minutes ago' in addition to the time string
     // by convention, for hiding during debugging, password elements should be named with "_PASS" in them,
     // and the global define DEBUG_PASSWORDS implemented to ensure they are not, or are
     // displayed in LOGN calls.
+#define VALUE_STYLE_TIME_SINCE  0x0008      // ui shows '23 minutes ago' in addition to the time string
 #define VALUE_STYLE_VERIFY      0x0010      // UI buttons will display a confirm dialog
 #define VALUE_STYLE_LONG        0x0020      // UI will show a long (rather than default 15ish) String Input Control
 #define VALUE_STYLE_OFF_ZERO    0x0040      // Allows 0 below min and displays it as "OFF"
