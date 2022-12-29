@@ -5,9 +5,9 @@
 **[Wifi](wifi.md)** --
 **[Basics](basics.md)** --
 **[Design](design.md)** --
-**[Details](details.md)** --
+**[Details](details.md)**
 
-This page describes how to get started with my_IOT, installing the
+This page describes how to get started with myIOT, installing the
 library and dependencies, building the testDevice example program,
 and running it for the first time.
 
@@ -27,25 +27,25 @@ Place a copy of this entire repository into your Arduino-libraries folder.
 
 That can be done using **Git**, or by downloading this repository as a **ZIP file** and placing the
 contents of the zip file into your Arduino-libraries folder.  In either case you should end up
-with a folder called **my_IOT** within your Arduino-libraries folder.
+with a folder called **myIOT** within your Arduino-libraries folder.
 
 
 #### High Level Defines
 
-The installation of the my_IOT library depends a bit upon what you intend to do with it.
+The installation of the myIOT library depends a bit upon what you intend to do with it.
 
 There are compile flags in the file **myIOTTypes.h** that can be set to 1 (one) or 0 (zero) to include
 or exclude various pieces of functionality from the library.   *You may want to modify **myIOTTypes.h**
 depending on your usage.*   The defaults are appropriate for building the included example **testDevice.ino**
 sketch.
 
-- **WITH_WS** default(1) - includes WebSockets, which is **required** for the my_IOT web user interface
+- **WITH_WS** default(1) - includes WebSockets, which is **required** for the myIOT web user interface
 - **WITH_NTP** default(1) - includes NTP (Network Time Protocol) to set the ESP32 clock when connected as a Wifi Station
 - **WITH_MQTT** default(0) - includes MQTT publication/subscription capabilities
 - **WITH_TELNET** default(0) - includes a Telnet Serial Client
 - **WITH_SD** default(0) - includes SD card and Logging to it
 - **WITH_BASIC_OTA** default(0) - includes Esperif's OTA capabilities, regardless of other settings
-- **DEFAULT_DEVICE_WIFI** default(1) - determines whether or not my_IOT Wifi is turned on, or off, by default
+- **DEFAULT_DEVICE_WIFI** default(1) - determines whether or not myIOT Wifi is turned on, or off, by default
 
 It is useful to present these defines here so that you can see how the basic Arduino Library dependencies work
 for your initial installation.

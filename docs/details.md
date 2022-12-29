@@ -5,7 +5,7 @@
 **[Wifi](wifi.md)** --
 **[Basics](basics.md)** --
 **[Design](design.md)** --
-**Details** --
+**Details**
 
 This page describes my motivation for creating this library, along with
 various other implementation details.
@@ -26,7 +26,7 @@ easy to understand devices.
 
 
 
-These my_IOT devices present a Webpage on your private local Wifi LAN and show up
+These myIOT devices present a Webpage on your private local Wifi LAN and show up
 automatically as SSDP Network devices on your Windows (or Mac) computer.  You just go
 to your Network folder, click on the device's icon, and the webpage pops up.
 
@@ -41,7 +41,7 @@ MQTT protocol.  But at the point you want to consolidate multiuple devices, ther
 an explosion of complexity and the focus switches entirely from the Device
 to the Network and the architecture that is chosen to drive that.
 
-Without MQTT or any other framework extensions, my_IOT devices are basically simple parameter
+Without MQTT or any other framework extensions, myIOT devices are basically simple parameter
 driven devices with a decent UI for modifing the parameters and monitoring the device.
 The simple UI also automatically supports OTA (Over the Air Updates) as well as including
 a full SD and SPIFFS File Manager so that you can upload and manage files on the device.
@@ -74,7 +74,7 @@ I just did not like any of it.
 I am just trying to make a simple ESP32 parameterized device with a decent UI !!!
 
 So, yes, this framework supports MQTT and can exist and interact with existing IOT frameworks.
-You can control a my_IOT device with your Alexa if you want.
+You can control a myIOT device with your Alexa if you want.
 
 Peronally, for the conglomeration of devices and user interface presentation, I chose an entirely
 different approach, instead of MQTT, based on software I had already written, and somewhat perfected, over

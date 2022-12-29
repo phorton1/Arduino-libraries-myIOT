@@ -3,10 +3,11 @@
 **[Home](readme.md)** --
 **[Getting Started](getting_started.md)** --
 **Wifi** --
+**[Basics](basics.md)** --
 **[Design](design.md)** --
-**[Details](details.md)** --
+**[Details](details.md)**
 
-This page describes the process of connecting to a my_IOT device via Wifi
+This page describes the process of connecting to a myIOT device via Wifi
 and the included WebUI.
 
 By default, and in our testDevice program, WiFi is turned on, and the device
@@ -43,7 +44,7 @@ possible Wifi connections.   Select it. You can uncheck the
 
 ### 2. Enter the default password and connect to the AP
 
-The default password for a my_IOT device is "11111111" (eight ones).
+The default password for a myIOT device is "11111111" (eight ones).
 Enter the password and press "Next".
 You may be presented with a window asking if you want to allow
 network discoverability. It doesn't matter what you answer to
@@ -103,13 +104,13 @@ At no point in this process were you connected to the internet, and the
 myIOT_device cannot be accessed except from this
 Access Point, or through your (private, safe) home network.*
 
-**my_IOT devices do not present anything, any ports or services, to the internet**
+**myIOT devices do not present anything, any ports or services, to the internet**
 
 
 ### 5. Find the testDevice using SSDP
 
 SSDP is an acronym for Service Search and Discovery Protocol.  This protocol has existed for
-20+ years, is well documented and understood.  A my_IOT device presents itself as a generic
+20+ years, is well documented and understood.  A myIOT device presents itself as a generic
 SSDP device to the local network.   Therefore on a machine that supports SSDP (like a generic
 Win10 machine) you should be able to just go to the Network folder in your Windows Explorer program,
 right-click in the window and say "refresh" to initiate a new SSDP search, and in a few seconds,
@@ -139,7 +140,7 @@ The WebUI consists of a number of subpages.
 
 - The **Dashboard**
 - An application specific device **Config** (configuration) page
-- A generic my_IOT **Device** page
+- A generic myIOT **Device** page
 - A *SPIFFS* file management page (includes OTA)
 - and possibly an **SD Card** file management page (if WITH_SD==1 and an SD Card is present)
 
@@ -161,7 +162,7 @@ from the dashboard page ... the state of the DEMO_MODE boolean, represented as a
 
 ### 3. Device Configuration
 
-All my_IOT devices include a set of values that include things like
+All myIOT devices include a set of values that include things like
 a command button to REBOOT the Esp32, the DEVICE_NAME (which is a user
 modifiable "preference" string), the DEBUG_LEVEL and LOG_LEVELS currently
 in play, a switch to turn WIFI on or off, and a readonly string showing you
@@ -227,19 +228,20 @@ card, and allowing you to upload or delete OUTER LEVEL FILES
 only, will appear.
 
 The following window is from a subsequent project, the
-**bilgeAlarm** that I created using this framework.
+[bilgeAlarm](https://github.com/phorton1/Arduino-bilgeAlarm) that I created using this framework.
 
 ![webui5.jpg](images/webui5.jpg)
 
-In THAT project I take advantage of the built in my_IOT logging
+In THAT project I take advantage of the built in myIOT logging
 capabilities to keep a logfile on the SD.  That project also uses
 a small data file, run_history.dat, stored on the SD Card.
 
 
 ## C. Done!
 
-Now that you have seen the basic WebUI and have a basic idea of
-what a my_IOT device is, and how it works, we can move onto the
-design of the system, and how to use it to create your own devices.
+Now that you have seen the basic WebUI and have a rough idea of
+what a myIOT device is, and how it works, we can move onto the
+basic design of the system, and explore the testDevice.ino
+implementation in more detail.
 
-Next: **[Design](design.md)**
+Next: **[Basics](basics.md)**

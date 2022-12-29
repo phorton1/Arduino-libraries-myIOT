@@ -5,11 +5,12 @@
 **[Wifi](wifi.md)** --
 **Basics** --
 **[Design](design.md)** --
-**[Details](details.md)** --
+**[Details](details.md)**
 
-This page provides an overview of the structure and main concepts of a my_IOT device.
+This page provides an overview of the main concepts of a myIOT device
+and explores the implementation of the testDevice.ino program.
 
-A my_IOT device is, essentially, a collection of **values** that are used to run,
+A myIOT device is, essentially, a collection of **values** that are used to run,
 and/or are set by, the device.
 
 It all starts with the **values**.
@@ -278,7 +279,7 @@ one of the values:
 ## B. Breaking down the testDevice.ino program
 
 So, armed with all of that, let's break down every line of the **testDevice.ino** program
-to see how a simple my_IOT device is implemented.
+to see how a simple myIOT device is implemented.
 
 ### 1. Header Includes and ID definitions
 
@@ -575,5 +576,7 @@ If WITH_MQTT=1 was defined while building this device, it could now easily
 be integrated into an existing IOT framework like Home Assistant or NodeRed/Mosquito,
 and even controlled from your Alexa or Siri voice interface.
 
+Next we will take a look at the [design](design.md) of the system, and
+how it is intended to be used, and extended to create new myIOT devices.
 
-Next:  **[Details](details.md)**
+Next:  **[Design](design.md)**
