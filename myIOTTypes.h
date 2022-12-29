@@ -14,13 +14,13 @@
 // default settings are for my generic IOT device (bilgeAlarm)
 // I can modify this at compile time via /base/bat/setup_platform.pm
 
-#ifndef WITH_SD
-    #define WITH_SD     0
-#endif
-
 
 #ifndef WITH_WS
     #define WITH_WS     1
+#endif
+
+#ifndef WITH_NTP
+    #define WITH_NTP    1
 #endif
 
 #ifndef WITH_MQTT
@@ -31,18 +31,17 @@
     #define WITH_TELNET 0
 #endif
 
-#ifndef WITH_NTP
-    #define WITH_NTP    0
-#endif
-
-#ifndef DEFAULT_DEVICE_WIFI
-    #define DEFAULT_DEVICE_WIFI 0
+#ifndef WITH_SD
+    #define WITH_SD     0
 #endif
 
 #ifndef WITH_BASIC_OTA
     #define WITH_BASIC_OTA     0
 #endif
 
+#ifndef DEFAULT_DEVICE_WIFI
+    #define DEFAULT_DEVICE_WIFI 1
+#endif
 
 
 #define ESP32_CORE_ARDUINO     1        // the core on which setup() and loop() run
@@ -106,9 +105,8 @@
 #define VALUE_STORE_NVS       0x01      // stored/retrieved from NVS (EEPROM)
 #define VALUE_STORE_WS        0x02      // broadcast to / received from WebSockets
 #define VALUE_STORE_MQTT_PUB  0x04      // published to (the) MQTT broker
-#define VALUE_STORE_MQTT_SUB  0x08      // subscribed to from (the) MQTT broker
+#define VALUE_STORE_MQTT_SUB  0x08      // subscribed from (the) MQTT broker
 #define VALUE_STORE_SERIAL    0x10      // recieved from serial port
-// #define VALUE_STORE_DATA      0x10      // history stored/retrieved from SD database
 
 #define VALUE_STORE_PREF      (VALUE_STORE_NVS | VALUE_STORE_WS)
 #define VALUE_STORE_TOPIC     (VALUE_STORE_MQTT_PUB | VALUE_STORE_MQTT_SUB | VALUE_STORE_WS)
@@ -123,8 +121,8 @@
     // by convention, for hiding during debugging, password elements should be named with "_PASS" in them,
     // and the global define DEBUG_PASSWORDS implemented to ensure they are not, or are
     // displayed in LOGN calls.
-#define VALUE_STYLE_TIME_SINCE  0x0008      // ui shows '23 minutes ago' in addition to the time string
-#define VALUE_STYLE_VERIFY      0x0010      // UI buttons will display a confirm dialog
+#define VALUE_STYLE_TIME_SINCE  0x0008      // UI shows '23 minutes ago' in addition to the time string
+#define VALUE_STYLE_VERIFY      0x0010      // UI command buttons will display a confirm dialog
 #define VALUE_STYLE_LONG        0x0020      // UI will show a long (rather than default 15ish) String Input Control
 #define VALUE_STYLE_OFF_ZERO    0x0040      // Allows 0 below min and displays it as "OFF"
 #define VALUE_STYLE_VERBOSE     0x0080      // if DEBUG_VALUE, these values changes will be logged as "verbose" and will not show up in logfiles
@@ -134,9 +132,6 @@
     //      sudo service mosquitto stop
     //      sudo rm /var/lib/mosquitto/mosquitto.db
     //      sudo service mosquitto start
-    // or individually with
-    //      mosquitto_pub -u myIOTClient -P 1234 -h localhost -t bilgeAlarm/ONBOARD_LED -n -r -d
-
 #define VALUE_STYLE_HIST_TIME    (VALUE_STYLE_READONLY | VALUE_STYLE_TIME_SINCE)
 #define VALUE_STYLE_NO_LOG       (VALUE_STYLE_READONLY | VALUE_STYLE_VERBOSE)
 

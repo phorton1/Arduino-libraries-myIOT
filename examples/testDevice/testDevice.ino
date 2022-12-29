@@ -114,16 +114,10 @@ void setup()
     LOGU("");
     LOGU("testDevice.ino setup() started on core(%d)",xPortGetCoreID());
 
-    #if WITH_SD
-    #if INIT_SD_EARLY
-        LOGD("sd_ok=%d",sd_ok);
-    #endif
-    #endif
-
     test_device = new testDevice();
     test_device->setup();
 
-    LOGU("testDevice.ino setup() finished",0);
+    LOGU("testDevice.ino setup() finished");
 }
 
 
