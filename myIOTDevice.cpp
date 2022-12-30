@@ -86,6 +86,7 @@ static enumValue logAllowed[] = {
     "WARNING",
     "INFO",
     "DEBUG",
+    "VERBOSE",
     0};
 
 static enumValue tzAllowed[] = {

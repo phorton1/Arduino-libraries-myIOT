@@ -46,9 +46,6 @@
 #define ID_MQTT_PASS      "MQTT_PASS"
 #define ID_OTA_PASS       "OTA_PASS"
 
-#define ID_DEVICE_VOLTS   "DEVICE_VOLTS"
-#define ID_DEVICE_AMPS    "DEVICE_AMPS"
-
 
 // timezone addition
 

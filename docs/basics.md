@@ -4,6 +4,7 @@
 **[Getting Started](getting_started.md)** --
 **[Wifi](wifi.md)** --
 **Basics** --
+**[How To](how_to.md)** --
 **[Design](design.md)** --
 **[Details](details.md)**
 
@@ -246,7 +247,7 @@ for the individual values.  The number of strings in the array implicitly define
 the range of the enumerated or bitwise value.
 
 For instance, the system itself defines the allowed "log" and "debug" levels to
-be from zero to five (0..5) via the following array of strings:
+be from zero to six (0..5) via the following array of strings:
 
 ```
 static enumValue logAllowed[] = {
@@ -256,6 +257,7 @@ static enumValue logAllowed[] = {
     "WARNING",
     "INFO",
     "DEBUG",
+    "VERBOSE",
     0};
 ```
 
@@ -412,11 +414,14 @@ values will exist on the device (over and above those from the base myIOTDevice)
 Note that this table is completely **const** and resides entirely in
 ESP32 flash memory, and does not take up any precious RAM!
 
-We start by providing an overriding defition for the initial device name.
+We start by providing an overriding defition for the initial DEVICE_NAME.
 This definition, because it has the same ID as a base class member, will
-override the definiton there, and thus end up as the value used within the base
-class.  As in the base class, with VALUE_STYLE_REQUIRED we force the user to
-provide a value for this string.  It cannot be blank.
+override the definiton there. As in the base class, we use VALUE_STYLE_REQUIRED
+to force the user to provide a value for this string.  It cannot be blank.
+
+This name shows up as the AP (Access Point) name for the device, as well
+as the title of the HTML page in the WebUI, and can be later modified by
+the user if they wish.
 
 We then define two values, one that is not saved persistently (VALUE_STORE_TOPIC)
 and one that is (VALUE_STORE_PREF), for the ONBOARD_LED and the DEMO_MODE booleans, respectively.
@@ -442,10 +447,10 @@ const valDescriptor testDevice::m_test_values[] =
 Finally we have a define for the number of values in the table, NUM_DEVICE_VALUES,
 as being the size of the whole table divided by the size of a single valDescriptor.
 
-This table, defining the values that a device has, along with the ability to place
+**This table, defining the values that a device has, along with the ability to place
 them on one of two UI webpages, along with storage and styling charactistics, default
 values and limits, is the essence of this system.  You define a device in terms of
-a number of values, then implement it to use and/or change those values in your code.
+a number of values, then implement it to use and/or change those values in your code.**
 
 
 ### 5. testDevice constructor and static member definitions
@@ -576,7 +581,6 @@ If WITH_MQTT=1 was defined while building this device, it could now easily
 be integrated into an existing IOT framework like Home Assistant or NodeRed/Mosquito,
 and even controlled from your Alexa or Siri voice interface.
 
-Next we will take a look at the [design](design.md) of the system, and
-how it is intended to be used, and extended to create new myIOT devices.
+Next we will describe how you can create your own myIOT device.
 
-Next:  **[Design](design.md)**
+Next:  **[How To](how_to.md)**

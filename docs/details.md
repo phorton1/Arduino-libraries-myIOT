@@ -4,13 +4,12 @@
 **[Getting Started](getting_started.md)** --
 **[Wifi](wifi.md)** --
 **[Basics](basics.md)** --
+**[How To](how_to.md)** --
 **[Design](design.md)** --
 **Details**
 
 This page describes my motivation for creating this library, along with
 various other implementation details.
-
-### Device UUID contains the full mac adress of the device
 
 
 ## Motivation
@@ -23,8 +22,6 @@ solutions to be overly complicated to implement and use, even if they do support
 world of Alexa's, Siri's, and Phone Apps.  The existing architectures that I found focus
 far more on the integration of items into the network than on developing simple,
 easy to understand devices.
-
-
 
 These myIOT devices present a Webpage on your private local Wifi LAN and show up
 automatically as SSDP Network devices on your Windows (or Mac) computer.  You just go
@@ -86,3 +83,5 @@ THIS project is all about creating devices on ESP32's and simply monitoring and 
 that CAN be, if chosen, integrated into an existing IOT.  But for many cases you just want to create
 a controllable ESP32 device, and could care less if it's available on the public internet at large,
 or integrated into your Alexa so you can talk to it.
+
+## Notes

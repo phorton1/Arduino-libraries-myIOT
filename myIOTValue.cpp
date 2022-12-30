@@ -14,7 +14,10 @@
 
 #define FIXED_FLOAT_PRECISION 3
 
-#define DEBUG_VALUES   1
+#ifndef DEBUG_VALUES
+    #define DEBUG_VALUES   1
+#endif
+
 
 #define LOG_VALUE_CHANGE(...)  if (m_desc->style & VALUE_STYLE_VERBOSE) LOGV(__VA_ARGS__); else LOGD(__VA_ARGS__)
 

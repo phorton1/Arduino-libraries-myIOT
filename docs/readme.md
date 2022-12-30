@@ -4,6 +4,7 @@
 **[Getting Started](getting_started.md)** --
 **[Wifi](wifi.md)** --
 **[Basics](basics.md)** --
+**[How To](how_to.md)** --
 **[Design](design.md)** --
 **[Details](details.md)**
 
@@ -19,9 +20,11 @@ IDE and serial monitor).
 Secondly, if you want, with a compile flag, you can also control it over Wifi using
 **Telnet**, with a program like Putty or any other common Telnet Client.
 
-Thirdly, each *myIOT device* presents its own **Web User Interface** (Webpage), that you can
-access over Wifi, via a Web Browser, without the need for any other third party programs or
-applications.
+Thirdly, each *myIOT device* is an **SSDP** (Services and Search Discovery Protocol)
+compatible device, so that it can be "found" on your home wifi network, and
+which presents its own **Web User Interface** (Webpage), that you can
+access it over Wifi, via a Web Browser, without the need for any other third
+party programs orapplications.
 
 Finally, these devices can support **[MQTT](https://en.wikipedia.org/wiki/MQTT)** so they
 can be integrated into existing IOT frameworks like HomeAssistant, or Mosquito and NodeRed,
@@ -33,7 +36,8 @@ This readme is broken up into several sub-pages.
 - **[Getting Started](getting_started.md)** - Installing the library and building the example program
 - **[Wifi](wifi.md)** - Accessing the device via Wifi and the supplied WebUI
 - **[Basics](basics.md)** - A basic description of Values and a breakdown of the testDevice.ino example program
-- **[Design](design.md)** - The overall design of this project, and some guidelines for how to build your own myIOT device.
+- **[HowTo](how_to.md)** - A short tutorial on how to create your own myIOT device.
+- **[Design](design.md)** - A review of the overall design of this project and it's API.
 - **[Details](details.md)** - Motivation, Implementation details, and more in-depth documentation
 
 *note: this architecture presumes that you have a good understanding of **C++** and
@@ -43,7 +47,7 @@ the **Arduino IDE** devlopement environment and know how to manually add **libra
 ## Also See
 
 I have built a number of devices based on this library.  They may be useful
-for understanding more about how to use this library.  Please see the
+for understanding more about how to use it.  Please see the
 following repositories for more information:
 
 - **[bilgeAlarm](https://github.com/phorton1/Arduino-bilgeAlarm)** - a device to monitor and control two bilge pumps on a sailboat that includes a car alarm if things go wrong
@@ -88,3 +92,5 @@ like to thank the following folks and efforts:
 - [bootstrap5.1.3.bundle.min.js and bootstrap5.1.3.min.css](https://getbootstrap.com/docs/5.1/getting-started/download/)
 - [bootstrap-input-spinner.js](https://github.com/shaack/bootstrap-input-spinner) Version 3.1.7 by **Stefen Haack**
 
+
+Next: **[Getting Started](getting_started.md)**

@@ -4,6 +4,7 @@
 **Getting Started** --
 **[Wifi](wifi.md)** --
 **[Basics](basics.md)** --
+**[How To](how_to.md)** --
 **[Design](design.md)** --
 **[Details](details.md)**
 

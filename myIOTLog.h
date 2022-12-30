@@ -14,7 +14,7 @@
 #define LOG_LEVEL_WARNING       3
 #define LOG_LEVEL_INFO          4
 #define LOG_LEVEL_DEBUG         5
-#define LOG_LEVEL_VERBOSE       6   // not sent to log file
+#define LOG_LEVEL_VERBOSE       6
 
 // wow, there's some kind of a reference to iot_log_level in the ESP32 libraries.
 // I don't get any compile or link warnings or errors, but the value mysteriously
