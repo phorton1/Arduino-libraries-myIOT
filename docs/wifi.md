@@ -119,7 +119,7 @@ the testDevice should show up in the "Other Devices" section, with an icon.
 
 ![wifi6-network.jpg](images/wifi6-network.jpg)
 
-If you now double click on the device, the below WebUI should load into your default browser.
+If you now double click on the **testDevice icon**, the below WebUI should load into your default browser.
 
 If you right click on the icon, and go to the properties page, you will be able to see the IP
 address of the device.

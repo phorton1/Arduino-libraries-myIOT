@@ -17,7 +17,7 @@ deriving from the **myIOTDevice** base class, providing some overridden methods,
 and defining your own table of **values**.
 
 There is a visible, public pointer the the myIOTDevice base class, **my_iot_device**
-that can be used by **any* code in the system to get at this API.
+that can be used by **any** code in the system to get at this API.
 
 This section of this page will describe a little more about the myIOTDevice class methods
 and members that you, as a developer, will be interested in.
@@ -189,7 +189,7 @@ however, they are **not intended** for use by application level code.
 One possible exception to that are the following methods, which *may* help you during
 debugging, and/or to get a better idea of how the system is working, by allowing you
 to directly get a **myIOTValue**, and/or to iterate over all of the values in the system,
-and providing an overrident method that will be called when ANY value changes.
+and providing an overriden method that will be called when ANY value changes.
 
 ```
 myIOTValue *findValueById(valueIdType id);
@@ -238,7 +238,7 @@ or other ansi compatible serial monitors*
 *note2: the Arduino serial monitor does not support ansi colors*
 
 
-Please see **myIOTLOg.h** and **cpp** for more details.
+Please see **myIOTLog.h** and **cpp** for more details.
 
 ### 1. Log Indentation
 

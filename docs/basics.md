@@ -285,7 +285,7 @@ to see how a simple myIOT device is implemented.
 
 ### 1. Header Includes and ID definitions
 
-The file starts by including **myIOTDevice.h** and **myIOTLog.h**, declaring
+The file starts by including **myIOTDevice.h** and **myIOTLog.h**, and declaring
 two const char * strings for the TEST_DEVICE type (and initial name) and
 the TEST_DEVICE version.
 

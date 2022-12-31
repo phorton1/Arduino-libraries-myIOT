@@ -20,10 +20,10 @@ IDE and serial monitor).
 Secondly, if you want, with a compile flag, you can also control it over Wifi using
 **Telnet**, with a program like Putty or any other common Telnet Client.
 
-Thirdly, each *myIOT device* is an **SSDP** (Services and Search Discovery Protocol)
+Thirdly, each *myIOT device* is automatically configured as an **SSDP** (Services and Search Discovery Protocol)
 compatible device, so that it can be "found" on your home wifi network, and
-which presents its own **Web User Interface** (Webpage), that you can
-access it over Wifi, via a Web Browser, without the need for any other third
+each device presents its own **Web User Interface** (Webpage), that you can
+access over Wifi, via a Web Browser, without the need for any other third
 party programs orapplications.
 
 Finally, these devices can support **[MQTT](https://en.wikipedia.org/wiki/MQTT)** so they

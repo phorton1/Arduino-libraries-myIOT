@@ -73,14 +73,14 @@ If you chose to use *Telnet* or *MQTT* you must also install the additional
 ### 1. Onboard LED Pin
 
 The test program is designed for use with a WROOM-32 ESP32 Dev board that has an onboard LED
-attached to Pin 2:
+attached to Pin 2, but *should* be usable with any ESP32 board that is supported by the Arduino IDE.
 
 ![ESP32_WROOM_with_ONBOARD_LED.jpg](images/ESP32_WROOM_with_ONBOARD_LED.jpg)
 
-If you do not have a board with the onboard LED, you can create a simple ESP32 circuit
-on a breadboard with some GPIO pin going to an LED and a 220 ohm resistor to ground,
-and modify the source code in testDevice.ino to set the appropriate pin number in
-the section of code that looks like this:
+If you do not have a board with the onboard LED and you want to try this testDevice,
+you can create a simple ESP32 circuit on a breadboard with some GPIO pin going to an
+LED and a 220 ohm resistor to ground, and modify the source code in testDevice.ino
+to set the appropriate pin number in the section of code that looks like this:
 
 ```
 //------------------------
@@ -97,14 +97,20 @@ the section of code that looks like this:
 
 ```
 
+
 ### 2. Compile and upload from Arduino IDE
 
 - open the **examples/testDevice.ino** sketch in the Arduino IDE
-- select the **ESP32 Dev Module** board from the Arduino *Tools-Boards* menu
+- select the **ESP32 Dev Module** (*or your specific kind of ESP32*) board from the Arduino *Tools-Boards* menu
 - select the **Default 4MB with spiffs** (1.2MB App/1.5MB SPIFFS) from the *Tools-Partition Scheme* menu
 - select the correct **COM Port** for the ESP32
 - build and upload the firmware using the Arduino IDE **Verify/Compile/Upload** commands
 - upload the contents of the **examples/data** folder to the ESP32 *SPIFFS* using the **Tools - ESP32 Sketch Data Upload** command
+
+*note: you can choose a different partition scheme, but the partition scheme
+you choose must (currently) be capable of storing at least 412kb on the SPIFFS
+partition if you want to use the WebUI, and it must include an
+OTA partition if you wish to use OTA.*
 
 
 ## C. Run the testDevice from the Arduino IDE Serial Monitor
