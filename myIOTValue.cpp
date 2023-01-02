@@ -457,9 +457,7 @@ void myIOTValue::setInt(int val, valueStore from)
 void myIOTValue::setFloat(float val, valueStore from)
 {
     #if DEBUG_VALUES
-        if (strcmp(m_desc->id,ID_DEVICE_VOLTS) &&
-            strcmp(m_desc->id,ID_DEVICE_AMPS))
-            LOG_VALUE_CHANGE("setFloat(%s,%0.3f) from(0x%02x)",m_desc->id,val,from);
+        LOG_VALUE_CHANGE("setFloat(%s,%0.3f) from(0x%02x)",m_desc->id,val,from);
     #endif
 
     checkReadonly(from);
