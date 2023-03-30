@@ -144,6 +144,8 @@ class myIOTDevice
         void    setFromString(valueIdType id, const char *val, valueStore from=VALUE_STORE_PROG);
         void    setFromString(valueIdType id, const String &val, valueStore from=VALUE_STORE_PROG)     { setFromString(id, val.c_str(), from); }
 
+        void    clearValueById(valueIdType id);     // necessary when values change type
+
         myIOTValue *findValueById(valueIdType id);
         const iotValueList getValues()  { return m_values; }
         virtual void onValueChanged(const myIOTValue *value, valueStore from) {}

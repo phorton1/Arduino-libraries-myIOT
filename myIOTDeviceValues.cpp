@@ -9,6 +9,19 @@
 #include <stdexcept>
 
 
+void myIOTDevice::clearValueById(valueIdType id)
+{
+    try
+    {
+        myIOTValue *value = findValueById(id);
+        value->clearNVSValue();
+    }
+    catch (String e)
+    {
+        LOGE("Could not clearValueById(%s) %s",id,e.c_str());
+    }
+}
+
 
 void myIOTDevice::addValues(const valDescriptor *desc, int num_values)
 {

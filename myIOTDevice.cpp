@@ -678,14 +678,14 @@ String myIOTDevice::handleCommand(const String &raw_command, valueStore from /*=
 
 
 
-#define PIN_POWER_SENSE  25
-
-static void enterSleepMode()
-    // go into deep sleep mode, keeping the rtc
-    // set the ULP to wake up on restoration of power
-{
-
-}
+// #define PIN_POWER_SENSE  25
+//
+// static void enterSleepMode()
+//     // go into deep sleep mode, keeping the rtc
+//     // set the ULP to wake up on restoration of power
+// {
+//
+// }
 
 //--------------------------------------------
 // loop
@@ -709,16 +709,15 @@ void myIOTDevice::loop()
 
     myIOTSerial::loop();
 
-    static bool last_has_power = false;
-    bool has_power = digitalRead(PIN_POWER_SENSE);
-
-    if (last_has_power != has_power)
-    {
-        last_has_power = has_power;
-        LOGW("has_power=%d");
-        if (!has_power)
-        {
-            enterSleepMode();
-        }
-    }
+    // static bool last_has_power = false;
+    // bool has_power = digitalRead(PIN_POWER_SENSE);
+    // if (last_has_power != has_power)
+    // {
+    //     last_has_power = has_power;
+    //     LOGW("has_power=%d");
+    //     if (!has_power)
+    //     {
+    //         enterSleepMode();
+    //     }
+    // }
 }

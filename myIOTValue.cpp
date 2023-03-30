@@ -27,6 +27,7 @@ bool myIOTValue::m_prefs_inited = false;
 Preferences myIOTValue::m_preferences;
 
 
+
 static uint32_t getEnumMax(enumValue *ptr)
 {
     if (!*ptr)
@@ -45,6 +46,8 @@ void myIOTValue::initPrefs()
 {
     m_preferences.clear();
 }
+
+
 
 
 void myIOTValue::init()
@@ -196,6 +199,13 @@ void myIOTValue::checkRequired(const char *val)
         throw String("empty value with VALUE_STYLE_REQUIRED");
 }
 
+
+
+void myIOTValue::clearNVSValue()
+{
+    LOGD("clearNVSValue(%s)",m_desc->id);
+    m_preferences.remove(m_desc->id);
+}
 
 
 void myIOTValue::invoke()
