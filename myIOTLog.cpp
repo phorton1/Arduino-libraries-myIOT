@@ -9,7 +9,7 @@
 // Logging Compile Time Preferences
 
 #ifndef LOG_ANSI_COLORS
-    #define LOG_ANSI_COLORS     0
+    #define LOG_ANSI_COLORS     1
 #endif
 
 #ifndef LOG_TIMESTAMP
