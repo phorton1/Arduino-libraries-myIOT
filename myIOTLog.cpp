@@ -16,6 +16,10 @@
     #define LOG_TIMESTAMP       1
 #endif
 
+#ifndef LOG_TIMESTAMP_MS
+    #define LOG_TIMESTAMP_MS    1
+#endif
+
 #ifndef LOG_MEM_LEVELS
     #define LOG_MEM_LEVELS      1
 #endif
@@ -103,7 +107,17 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 	#endif
 
 	#if LOG_TIMESTAMP
-		String tm = timeToString(time(NULL));
+		struct timeval tv_now;
+		gettimeofday(&tv_now, NULL);
+		String tm = timeToString(tv_now.tv_sec);	// time(NULL));
+
+		#if LOG_TIMESTAMP_MS
+			static char ibuf[12];
+			int ms = tv_now.tv_usec / 1000L;
+			sprintf(ibuf,".%03d",ms);
+			tm += ibuf;
+		#endif
+
 		tm += " ";
 		mycat(raw_buf,tm.c_str(),&end);
 	#endif
