@@ -212,14 +212,12 @@ void myIOTHTTP::onConnectStation()
 
     #if WITH_NTP
 
-        LOGD("Connecting to ntpServer");
-        const char* ntpServer = "pool.ntp.org";
-
+        String ntpServer = my_iot_device->getString(ID_NTP_SERVER);    // "pool.ntp.org";
         uint32_t tz_enum = my_iot_device->getEnum(ID_DEVICE_TZ);
         const char *tz_string = tzString(static_cast<IOT_TIMEZONE>(tz_enum));
-        LOGI("   TZ(%d)=%s",tz_enum,tz_string);
+        LOGI("Connecting to ntpServer=%s TZ(%d)=%s",ntpServer.c_str(),tz_enum,tz_string);
         // setting ESP32 timezone from https://randomnerdtutorials.com/esp32-ntp-timezones-daylight-saving/
-        configTime(0, 0, ntpServer);
+        configTime(0, 0, ntpServer.c_str());
         setenv("TZ", tz_string, 1);
         tzset();
 

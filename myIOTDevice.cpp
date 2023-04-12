@@ -35,6 +35,10 @@
     #define DEFAULT_OTA_PASSWORD   "AAA13579"
 #endif
 
+#if WITH_NTP
+    #define DEFAULT_NTP_SERVER  "pool.ntp.org"
+#endif
+
 
 // reminder
 // PIN_SDCARD_CS = 5
@@ -57,7 +61,10 @@ static valueIdType device_items[] = {
     ID_LOG_LEVEL,
     ID_DEVICE_WIFI,
     ID_DEVICE_IP,
+#if WITH_NTP
     ID_DEVICE_TZ,
+    ID_NTP_SERVER,
+#endif
     ID_AP_PASS,
     ID_STA_SSID,
     ID_STA_PASS,
@@ -119,9 +126,9 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_DEVICE_WIFI,   VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_wifi,     (void *) onChangeWifi, { .int_range = { DEFAULT_DEVICE_WIFI }} },
     { ID_DEVICE_IP,     VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_ip,       },
 
-
 #if WITH_NTP
     { ID_DEVICE_TZ,     VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_tz,       (void *)onChangeTZ,   { .enum_range = { IOT_TZ_EST, tzAllowed }} },
+    { ID_NTP_SERVER,   VALUE_TYPE_STRING,      VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_ntp_server,      NULL,   DEFAULT_NTP_SERVER },
 #endif
 
     { ID_DEBUG_LEVEL,   VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &iot_debug_level,  NULL,   { .enum_range = { LOG_LEVEL_DEBUG, logAllowed }} },
@@ -156,7 +163,12 @@ String myIOTDevice::_device_version = IOT_DEVICE_VERSION;
 bool myIOTDevice::_device_wifi = DEFAULT_DEVICE_WIFI;
 
 String myIOTDevice::_device_ip;
-IOT_TIMEZONE myIOTDevice::_device_tz;
+
+#if WITH_NTP
+    IOT_TIMEZONE myIOTDevice::_device_tz;
+    String myIOTDevice::_ntp_server;
+#endif
+
 bool   myIOTDevice::_device_booting;
 #if WITH_SD
     bool   myIOTDevice::m_sd_started;

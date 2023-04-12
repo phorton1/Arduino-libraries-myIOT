@@ -30,7 +30,12 @@
 #define ID_DEVICE_NAME    "DEVICE_NAME"
 #define ID_DEVICE_WIFI    "WIFI"
 #define ID_DEVICE_IP      "DEVICE_IP"
+
+#if WITH_NTP
 #define ID_DEVICE_TZ      "DEVICE_TZ"
+#define ID_NTP_SERVER     "NTP_SERVER"
+#endif
+
 #define ID_DEVICE_BOOTING "DEVICE_BOOTING"
 #define ID_RESET_COUNT    "RESET_COUNT"
 
@@ -243,7 +248,10 @@ class myIOTDevice
         static String _device_version;
         static bool   _device_wifi;
         static String _device_ip;
-        static IOT_TIMEZONE _device_tz;
+        #if WITH_NTP
+            static IOT_TIMEZONE _device_tz;
+            static String _ntp_server;
+        #endif
         static bool   _device_booting;
 
         // working vars
