@@ -1,6 +1,9 @@
 //--------------------------
 // myIOTHTTP.cpp
 //--------------------------
+// The HTTP Server is responsible for starting and stopping
+// the underlying SSDP Server (in station mode) and DNS server
+// (in AP mode) via calls to onConnect and onDisconnect AP/Station
 
 #include "myIOTHTTP.h"
 #include "myIOTDevice.h"
@@ -249,7 +252,6 @@ void myIOTHTTP::onConnectStation()
 
     proc_leave();
 }
-
 void myIOTHTTP::onDisconnectAP()
 {
     LOGD("myIOTHTTP::onDisconnectAP()");
@@ -377,6 +379,15 @@ void myIOTHTTP::handle_captive()
     if (SPIFFS.exists(CAPTIVE_PORTAL_HTML))
     {
         my_iot_device->clearStopAP();
+            // we want to stop wifi from turning off the AP once
+            // we have started a session, even if it *might* prefer
+            // to stop the AP and (re)connect to a station otherwise.
+            // Once a captive portal session is started, we will
+            // not go to station mode until succesfull WebUI call
+            // thru myIOTDevice() to connect() OR a reboot of
+            // the device, or some long amount of time.
+
+
         File file = SPIFFS.open(CAPTIVE_PORTAL_HTML, FILE_READ);
         web_server.streamFile(file, "text/html");
         file.close();
@@ -410,6 +421,10 @@ void myIOTHTTP::handle_request()
     if (my_iot_device->getConnectStatus() & IOT_CONNECT_AP)
     {
         myIOTWifi::suppressAutoConnectSTA();
+            // this is very similar to clearStopAP() in that
+            // it prevents WIFI from disconnecting the AP and
+            // starting the station automatically.
+
         web_server.send(200, "text/html", doReplacements(PAGE_CAPTIVE));
     }
 

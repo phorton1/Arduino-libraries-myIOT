@@ -324,7 +324,7 @@ void myIOTDevice::setBenum(valueIdType id, uint32_t val, valueStore from)
     {
         myIOTValue *value = findValueById(id);
         id = value->getId();
-        // LOGD("myIOTDevice::setBenum(%s,0x%04x) from(0x%02x)",id,val,from);
+        // LOGV("myIOTDevice::setBenum(%s,0x%04x) from(0x%02x)",id,val,from);
         value->setBenum(val,from);
     }
     catch (String e)

@@ -19,6 +19,8 @@ public:
     static void loop();
 
     #if WITH_TELNET
+		// the myIOTSerial device is responsible for starting and
+		// stopping the telnet server when getConnectStatus() changes
         static ESPTelnet telnet;
         static bool telnetConnected();
     #endif
@@ -30,6 +32,3 @@ private:
     static void serialTask(void *param);
 
 };
-
-
-

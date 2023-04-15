@@ -19,7 +19,7 @@
 #endif
 
 
-#define LOG_VALUE_CHANGE(...)  if (m_desc->style & VALUE_STYLE_VERBOSE) LOGV(__VA_ARGS__); else LOGD(__VA_ARGS__)
+#define LOG_VALUE_CHANGE(...)  LOGV(__VA_ARGS__)
 
 
 

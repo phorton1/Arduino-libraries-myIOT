@@ -125,7 +125,6 @@
 #define VALUE_STYLE_VERIFY      0x0010      // UI command buttons will display a confirm dialog
 #define VALUE_STYLE_LONG        0x0020      // UI will show a long (rather than default 15ish) String Input Control
 #define VALUE_STYLE_OFF_ZERO    0x0040      // Allows 0 below min and displays it as "OFF"
-#define VALUE_STYLE_VERBOSE     0x0080      // if DEBUG_VALUE, these values changes will be logged as "verbose" and will not show up in logfiles
 #define VALUE_STYLE_RETAIN      0x0100      // MQTT if published, will be "retained"
     // CAREFUL with the use of MQTT retained messages!!
     // They can only be cleared on the rpi with:
@@ -133,7 +132,6 @@
     //      sudo rm /var/lib/mosquitto/mosquitto.db
     //      sudo service mosquitto start
 #define VALUE_STYLE_HIST_TIME    (VALUE_STYLE_READONLY | VALUE_STYLE_TIME_SINCE)
-#define VALUE_STYLE_NO_LOG       (VALUE_STYLE_READONLY | VALUE_STYLE_VERBOSE)
 
 typedef const char *valueIdType;
 typedef char        valueType;

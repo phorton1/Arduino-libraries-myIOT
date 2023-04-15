@@ -18,10 +18,12 @@ class myIOTHTTP
         void setup();
         void loop();
 
-        void onConnectStation();
-        void onDisconnectAP();
         void onConnectAP();
-            // pass thrus from myIOTDevice
+        void onDisconnectAP();
+        void onConnectStation();
+            // The HTTP Server is responsible for starting and stopping
+            // the underlying SSDP Server (in station mode) and DNS server
+            // (in AP mode) via calls to onConnect and onDisconnect AP/Station
 
 
     protected:

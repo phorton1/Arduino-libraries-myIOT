@@ -156,7 +156,6 @@ encrypted and generally hidden from view (VALUE_STYLE_PASSWORD), and so on.
 #define VALUE_STYLE_VERIFY      0x0010      // UI command buttons will display a confirm dialog
 #define VALUE_STYLE_LONG        0x0020      // UI will show a long (rather than default 15ish) String Input Control
 #define VALUE_STYLE_OFF_ZERO    0x0040      // Allows 0 below min and displays it as "OFF"
-#define VALUE_STYLE_VERBOSE     0x0080      // if DEBUG_VALUE, these values changes will be logged as "verbose" and will not show up in logfiles
 #define VALUE_STYLE_RETAIN      0x0100      // MQTT if published, will be "retained"
     // CAREFUL with the use of MQTT retained messages!!
     // They can only be cleared on the rpi with:
@@ -164,9 +163,6 @@ encrypted and generally hidden from view (VALUE_STYLE_PASSWORD), and so on.
     //      sudo rm /var/lib/mosquitto/mosquitto.db
     //      sudo service mosquitto start
 ```
-
-VALUE_STYLE_VERBOSE is used in the debugging of the value setting code itself,
-and generally not intended for use by clients.
 
 VALUE_STYLE_RETAIN is the only style that is specific to MQTT, and is used to
 tell the MQTT broker to retain the value persistently, and should be used with care.
@@ -176,7 +172,7 @@ are a couple of combined definitions that I use here and there:
 
 ```
 #define VALUE_STYLE_HIST_TIME    (VALUE_STYLE_READONLY | VALUE_STYLE_TIME_SINCE)
-#define VALUE_STYLE_NO_LOG       (VALUE_STYLE_READONLY | VALUE_STYLE_VERBOSE)
+
 ```
 
 ### 4. Value Pointer

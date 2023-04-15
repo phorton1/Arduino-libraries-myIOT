@@ -442,7 +442,37 @@ void myIOTDevice::setup()
 
     showIncSetupProgress();         // 2
 
+    // I would like to change the system so that we consistently
+    // allow setup() and associated tasks run invariantly,
+    // eliminate unused loops() where there are tasks (with defines)
+    // and use a consistent onConnectStatusChanged() method, where there
+    // is a new mode IOT_CONNECT_OFF and IOT_CONNECT_ON is equal
+    // to the current IOT_CONNECT_NONE, and IOT_CONNECT_OFF encapsulates
+    // ID_DEVICE_WIFI except for the user event of turning it on or off.
+
     my_iot_wifi.setup();
+
+        // currently contains a call to connect() if WIFI=1
+        // would become my_iot_wifi.begin() if WIFI=1 and
+        // my_iot_wifi.end() if WIFI=0 AFTER all setup()
+        // methods and tasks are running.
+        //
+        // Then onChangeWifi() could just call begin() or
+        // end() appropriately, and my_iot_wifi, in turn,
+        // would call back with iotDevice:::onConnectStatusChanged()
+        // which would then propogate downwards through all
+        // objects.
+        //
+        // The loops() and tasks could then do nothing when
+        //
+        //
+        // HOWEVER it is probably better to turn off the services
+        // in a specific order BEFORE actually turnning the wifi
+        // off. Each sub device would then have to be responsible.
+        //
+        // simple:  my_iot_wifi calls onConnectStatusChanged()
+        // BEFORE disconnecting and AFTER connecting.
+
 
     showIncSetupProgress();         // 3 = last internal bilgeAlarm LED
 
@@ -450,13 +480,21 @@ void myIOTDevice::setup()
 
     #if WITH_WS
         my_web_sockets.setup();
+            // invariantly starts a task, but only
+            // currently calls underlying begin() if WIFI==1
     #endif
 
     #if WITH_MQTT
         my_iot_mqtt.setup();
+            // long unused implementation of mqtt invariantly starts a task
+            // and always tries to connect to an mqtt server if !connected and
+            // status==IOT_CONNECT_STA but has no 'disconnect' method if wifi
+            // changes,
     #endif
 
     myIOTSerial::begin();
+        // invariantly starts a task, but only
+        // currently calls telnet.begin() if WIFI==1
 
     // everything after wifi setup is encapsulated in the
     // led's clearing at the top of loop() or in some later
@@ -486,6 +524,9 @@ iotConnectStatus_t myIOTDevice::getConnectStatus()
     return my_iot_wifi.getConnectStatus();
 }
 
+
+
+
 void myIOTDevice::clearStopAP()
 {
     my_iot_wifi.clearStopAP();
@@ -507,6 +548,9 @@ void myIOTDevice::onConnectAP()
     _device_ip = myIOTWifi::getIpAddress();
     my_iot_http.onConnectAP();
 }
+
+
+
 
 #if WITH_WS
     void myIOTDevice::wsBroadcast(const char *msg)
@@ -707,19 +751,19 @@ void myIOTDevice::loop()
 {
     if (_device_wifi)
     {
-        my_iot_wifi.loop();
-        my_iot_http.loop();
+        my_iot_wifi.loop();     // required
+        my_iot_http.loop();     // required
 
         #if WITH_WS
-            my_web_sockets.loop();
+            my_web_sockets.loop();      // has a task
         #endif
 
         #if WITH_MQTT
-            my_iot_mqtt.loop();
+            my_iot_mqtt.loop();         // has a task
         #endif
     }
 
-    myIOTSerial::loop();
+    myIOTSerial::loop();        // has a task
 
     // static bool last_has_power = false;
     // bool has_power = digitalRead(PIN_POWER_SENSE);

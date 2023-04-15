@@ -20,7 +20,11 @@ class myIOTWifi
 
         static iotConnectStatus_t getConnectStatus()  { return m_connect_status; }
         static void connect(const String &sta_ssid, const String &sta_pass);
+            // synonymous with begin() at this time, this is the entry point
+            // to start wifi in either station or AP mode.
+
         static void disconnect();
+
         static void clearStopAP() { m_stop_ap = 0; }
 
         static void suppressAutoConnectSTA();
