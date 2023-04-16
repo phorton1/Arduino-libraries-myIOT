@@ -11,9 +11,6 @@ class myIOTWifi
 {
     public:
 
-        // myIOTWifi() {}
-        // ~myIOTWifi() {}
-
         static void setup();
         static void loop();
         static const String &getIpAddress() { return m_ip_address; }

@@ -176,13 +176,13 @@ void myIOTHTTP::handle_SPIFFS() { handle_fileUpload(0,SPIFFS); }
 
 void myIOTHTTP::onConnectStation()
 {
-    LOGD("myIOTHTTP::onConnectStation()");
+    LOGI("myIOTHTTP::onConnectStation()");
     proc_entry();
 
     web_server.begin();
     LOGI("STA HTTP started on port 80");
 
-    LOGD("Starting SSDP");
+    LOGI("Starting SSDP");
     SSDP.end();
     SSDP.setSchemaURL("description.xml");
     SSDP.setHTTPPort(MY_HTTP_PORT);
@@ -221,45 +221,66 @@ void myIOTHTTP::onConnectStation()
         uint32_t tz_enum = my_iot_device->getEnum(ID_DEVICE_TZ);
         const char *tz_string = tzString(static_cast<IOT_TIMEZONE>(tz_enum));
         LOGI("Connecting to ntpServer=%s TZ(%d)=%s",ntpServer.c_str(),tz_enum,tz_string);
+
         // setting ESP32 timezone from https://randomnerdtutorials.com/esp32-ntp-timezones-daylight-saving/
-        configTime(0, 0, ntpServer.c_str());
-        setenv("TZ", tz_string, 1);
-        tzset();
 
-        // old code with #define GMT_TIME_ZONE -5
-        // const long  gmtOffset_sec = GMT_TIME_ZONE * 60 * 60;
-        // const int   daylightOffset_sec = 0;
-        // configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+        // try up to 5 times to connect.  The time can be crucial for
+        // many applications.
 
-        // validate ntp configuration
+        bool ok = 0;
+        int count = 0;
 
-        struct tm timeinfo;
-        if (getLocalTime(&timeinfo))
+        while (!ok && count++ < 5)
         {
-            LOGD("   NTP connected: %04d-%02d-%02d-%02d:%02d:%02d  DST(%d)",
-                timeinfo.tm_year +1900,
-                timeinfo.tm_mon + 1,
-                timeinfo.tm_mday,
-                timeinfo.tm_hour,
-                timeinfo.tm_min,
-                timeinfo.tm_sec,
-                timeinfo.tm_isdst);
-        }
-        else
-        {
-            LOGD("   NTP not connected");
+            configTime(0, 0, ntpServer.c_str());
+            setenv("TZ", tz_string, 1);
+            tzset();
+
+            // old code with #define GMT_TIME_ZONE -5
+            // const long  gmtOffset_sec = GMT_TIME_ZONE * 60 * 60;
+            // const int   daylightOffset_sec = 0;
+            // configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+            // validate ntp configuration
+
+            struct tm timeinfo;
+            if (getLocalTime(&timeinfo))
+            {
+                LOGU("NTP try(%d) connected: %04d-%02d-%02d-%02d:%02d:%02d  DST(%d)",
+                    count,
+                    timeinfo.tm_year +1900,
+                    timeinfo.tm_mon + 1,
+                    timeinfo.tm_mday,
+                    timeinfo.tm_hour,
+                    timeinfo.tm_min,
+                    timeinfo.tm_sec,
+                    timeinfo.tm_isdst);
+                ok = 1;
+            }
+            else
+            {
+                LOGE("NTP try(%d) failed!!");
+            }
         }
 
+        if (!ok)
+        {
+            LOGE("COULD NOT START NTP!!!");
+        }
     #endif  // WITH_NTP
 
     proc_leave();
 }
+
+
 void myIOTHTTP::onDisconnectAP()
 {
     LOGD("myIOTHTTP::onDisconnectAP()");
     dns_server.stop();
 
 }
+
+
 void myIOTHTTP::onConnectAP()
 {
     LOGD("myIOTHTTP::onConnectAP()");
