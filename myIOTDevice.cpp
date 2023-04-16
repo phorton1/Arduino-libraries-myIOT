@@ -206,6 +206,9 @@ void myIOTDevice::onChangeWifi(const myIOTValue *desc, bool val)
     }
     else
     {
+        #if WITH_WS
+            my_web_sockets.end();
+        #endif
         my_iot_wifi.disconnect();
     }
 }

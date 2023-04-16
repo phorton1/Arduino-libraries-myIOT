@@ -23,6 +23,7 @@ class myIOTWebSockets
 
         static void setup();
         static void begin();
+        static void end();
         static void loop();
 
         static void broadcast(const char *msg);

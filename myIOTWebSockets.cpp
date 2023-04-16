@@ -36,6 +36,7 @@
 
 WebSocketsServer myIOTWebSockets::m_web_sockets(WS_PORT);
 
+static bool started = 0;
 static int connect_count = 0;
 
 
@@ -48,9 +49,26 @@ myIOTWebSockets::myIOTWebSockets()
 // static
 void myIOTWebSockets::begin()
 {
-    LOGI("myIOTWebSockets begin()");
-    m_web_sockets.begin();
+    if (!started)
+    {
+        started = 1;
+        LOGI("myIOTWebSockets begin()");
+        m_web_sockets.begin();
+    }
 }
+
+
+// static
+void myIOTWebSockets::end()
+{
+    if (started)
+    {
+        started = 0;
+        LOGI("myIOTWebSockets end()");
+        m_web_sockets.close();
+    }
+}
+
 
 void myIOTWebSockets::setup()
 {
@@ -96,7 +114,8 @@ void myIOTWebSockets::setup()
         while (1)
         {
             vTaskDelay(1);
-            m_web_sockets.loop();
+            if (started)
+                m_web_sockets.loop();
             #ifdef DEBUG_WS_TASK_STACK
                 UBaseType_t high = uxTaskGetStackHighWaterMark(NULL);
                 if (saved != high)
@@ -113,23 +132,27 @@ void myIOTWebSockets::setup()
 void myIOTWebSockets::loop()
 {
 #ifndef WS_WITH_TASK
-    m_web_sockets.loop();
+    if (started)
+        m_web_sockets.loop();
 #endif
 }
 
 void myIOTWebSockets::broadcast(const char *msg)
 {
-    m_web_sockets.broadcastTXT(msg);
+    if (started)
+        m_web_sockets.broadcastTXT(msg);
 }
 
 void myIOTWebSockets::onFileSystemChanged(bool sdcard)
 {
-    broadcast(fileDirectoryJson(sdcard).c_str());
+    if (started)
+        broadcast(fileDirectoryJson(sdcard).c_str());
 }
 
 void myIOTWebSockets::sendTXT(int num, const char *msg)
 {
-    m_web_sockets.sendTXT(num,msg);
+    if (started)
+        m_web_sockets.sendTXT(num,msg);
 }
 
 

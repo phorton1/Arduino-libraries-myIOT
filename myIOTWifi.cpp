@@ -112,6 +112,9 @@ uint32_t myIOTWifi::m_stop_ap;
 bool myIOTWifi::m_suppress_auto_sta;
 String myIOTWifi::m_ip_address;
 
+static uint32_t g_reconnect = 0;
+
+
 #if WITH_BASIC_OTA
     static bool ota_started = false;
     static void startArduinoOTA()
@@ -216,21 +219,26 @@ void myIOTWifi::setup()
 void myIOTWifi::disconnect()
 {
     LOGD("myIOTWifi::disconnect()");
+    iotConnectStatus_t old_status = m_connect_status;
 
-    if (m_connect_status & IOT_CONNECT_STA)
+    m_connect_status = IOT_CONNECT_NONE;
+    m_stop_ap = 0;
+    g_reconnect = 0;
+
+    if (old_status & IOT_CONNECT_STA)
     {
+        LOGI("disconnecting station");
         WiFi.disconnect();   // station only
-        LOGI("disconnecting station ...");
     }
-    if (m_connect_status & IOT_CONNECT_AP)
+    if (old_status & IOT_CONNECT_AP)
     {
-        m_stop_ap = 0;
         LOGI("disconnecting Access Point");
         WiFi.softAPdisconnect(true);  // false == leave AP on?
-        m_connect_status &= ~IOT_CONNECT_AP;
         delay(400);
-        WiFi.mode(WIFI_STA);
     }
+
+    LOGI("turning off wifi");
+    WiFi.mode(WIFI_OFF);
 }
 
 
@@ -406,7 +414,6 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
 
 void myIOTWifi::loop()
 {
-    static uint32_t g_reconnect = 0;
     if (!m_suppress_auto_sta && g_reconnect && millis() > g_reconnect + AP_RECONNECT_TIME)
     {
         LOGI("autoReconnecting to station...");
@@ -418,6 +425,7 @@ void myIOTWifi::loop()
     }
     else if (
         g_reconnect == 0 &&
+        my_iot_device->getBool(ID_DEVICE_WIFI) &&
         my_iot_device->getString(ID_STA_SSID) != "" &&
         WiFi.status() != WL_CONNECTED)
     {
