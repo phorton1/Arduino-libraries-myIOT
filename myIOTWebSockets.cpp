@@ -79,7 +79,7 @@ void myIOTWebSockets::setup()
     if (my_iot_device->getBool(ID_DEVICE_WIFI))
         begin();
 
-    #ifdef WS_WITH_TASK
+    #ifdef WS_TASK
         // Must run on ESP32_CORE_ARDUINO==1
         // Cannot run on ESP32_CORE_OTHER==0
         // see notes in bilgeAlarm.cpp lcdPrint()
@@ -99,7 +99,7 @@ void myIOTWebSockets::setup()
 }
 
 
-#ifdef WS_WITH_TASK
+#ifdef WS_TASK
 
     #define DEBUG_WS_TASK_STACK 1
 
@@ -129,13 +129,13 @@ void myIOTWebSockets::setup()
 #endif
 
 
-void myIOTWebSockets::loop()
-{
-#ifndef WS_WITH_TASK
-    if (started)
-        m_web_sockets.loop();
+#ifndef WS_TASK
+    void myIOTWebSockets::loop()
+    {
+        if (started)
+            m_web_sockets.loop();
+    }
 #endif
-}
 
 void myIOTWebSockets::broadcast(const char *msg)
 {

@@ -49,8 +49,8 @@
 uint32_t iot_log_level = LOG_LEVEL_INFO;
 uint32_t iot_debug_level = LOG_LEVEL_DEBUG;
 volatile int iot_proc_level = 0;
-bool iot_inhibit_cr = false;
 static bool logfile_error = 0;
+
 
 
 #if PROC_ENTRY_AS_METHOD
@@ -160,17 +160,12 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 	vsnprintf(end,avail,format,*var);
 	len = strlen(display_buf);
 	end = &display_buf[len];
+	strcpy(end,"\n");
+	end++;
 
-	if (!iot_inhibit_cr)
-	{
-		strcpy(end,"\n");
-		end++;
-		#if LOG_ANSI_COLORS
-			strcpy(end,MSG_COLOR_LIGHT_GREY);
-		#endif
-		// end now points to the terminating pointer so we can set it
-		// to zero to write to logfile
-	}
+	#if LOG_ANSI_COLORS
+		strcpy(end,MSG_COLOR_LIGHT_GREY);
+	#endif
 
 	if (iot_debug_level >= level)
 	{
@@ -181,7 +176,8 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 		#endif
 	}
 
-	// output to logfile
+	// output non verbose messages to logfile
+
     #if WITH_SD
 		if (level < LOG_LEVEL_VERBOSE &&
 			iot_log_level >= level &&
@@ -199,10 +195,6 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 			}
 			else
 			{
-				// The logfile will not get the dots from iot_inhibit_cr
-				// and adds a cr if it wasn't there
-
-				strcpy(end,iot_inhibit_cr?"\n":"");
 				file.print(raw_buf);
 				file.close();
 			}
@@ -218,7 +210,6 @@ void LOGU(const char *format, ...)
 	va_start(var, format);
     log_output(false,LOG_LEVEL_USER,format,&var);
 	va_end(var);
-    iot_inhibit_cr = false;
 }
 void LOGE(const char *format, ...)
 {
@@ -226,7 +217,6 @@ void LOGE(const char *format, ...)
 	va_start(var, format);
 	log_output(false,LOG_LEVEL_ERROR,format,&var);
 	va_end(var);
-    iot_inhibit_cr = false;
 }
 void LOGW(const char *format, ...)
 {
@@ -234,7 +224,6 @@ void LOGW(const char *format, ...)
 	va_start(var, format);
 	log_output(false,LOG_LEVEL_WARNING,format,&var);
 	va_end(var);
-    iot_inhibit_cr = false;
 }
 void LOGI(const char *format, ...)
 {
@@ -242,7 +231,6 @@ void LOGI(const char *format, ...)
 	va_start(var, format);
 	log_output(false,LOG_LEVEL_INFO,format,&var);
 	va_end(var);
-    iot_inhibit_cr = false;
 }
 void LOGD(const char *format, ...)
 {
@@ -250,7 +238,6 @@ void LOGD(const char *format, ...)
 	va_start(var, format);
 	log_output(true,LOG_LEVEL_DEBUG,format,&var);
 	va_end(var);
-    iot_inhibit_cr = false;
 }
 void LOGV(const char *format, ...)
 {
@@ -258,7 +245,6 @@ void LOGV(const char *format, ...)
 	va_start(var, format);
 	log_output(true,LOG_LEVEL_VERBOSE,format,&var);
 	va_end(var);
-    iot_inhibit_cr = false;
 }
 
 //------------------------------------

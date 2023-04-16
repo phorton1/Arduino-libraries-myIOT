@@ -10,13 +10,18 @@
     #include <ESPTelnet.h>
 #endif
 
+#define SERIAL_TASK
+
 
 class myIOTSerial
 {
 public:
 
     static void begin();
-    static void loop();
+
+	#ifndef SERIAL_TASK
+		static void loop();
+	#endif
 
     #if WITH_TELNET
 		// the myIOTSerial device is responsible for starting and

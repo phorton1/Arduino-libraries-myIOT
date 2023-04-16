@@ -31,9 +31,7 @@
     #include <SD.h>
 #endif
 
-#if WITH_BASIC_OTA
-    #define DEFAULT_OTA_PASSWORD   "AAA13579"
-#endif
+
 
 #if WITH_NTP
     #define DEFAULT_NTP_SERVER  "pool.ntp.org"
@@ -74,9 +72,7 @@ static valueIdType device_items[] = {
     ID_MQTT_USER,
     ID_MQTT_PASS,
 #endif
-#if WITH_BASIC_OTA
-    ID_OTA_PASS,
-#endif
+
     ID_FACTORY_RESET,
     ID_DEVICE_TYPE,
     ID_DEVICE_VERSION,
@@ -141,9 +137,6 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_MQTT_PORT,     VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,   { .int_range = { 1883, 1, 65535 }} },
     { ID_MQTT_USER,     VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,   "myIOTClient" },
     { ID_MQTT_PASS,     VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   "1234" },
-#endif
-#if WITH_BASIC_OTA
-    { ID_OTA_PASS,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   DEFAULT_OTA_PASSWORD },
 #endif
 };
 
@@ -758,25 +751,19 @@ void myIOTDevice::loop()
         my_iot_http.loop();     // required
 
         #if WITH_WS
+        #ifndef WS_TASK
             my_web_sockets.loop();      // has a task
+        #endif
         #endif
 
         #if WITH_MQTT
+        #ifndef MQTT_TASK
             my_iot_mqtt.loop();         // has a task
+        #endif
         #endif
     }
 
-    myIOTSerial::loop();        // has a task
-
-    // static bool last_has_power = false;
-    // bool has_power = digitalRead(PIN_POWER_SENSE);
-    // if (last_has_power != has_power)
-    // {
-    //     last_has_power = has_power;
-    //     LOGW("has_power=%d");
-    //     if (!has_power)
-    //     {
-    //         enterSleepMode();
-    //     }
-    // }
+    #ifndef SERIAL_TASK
+        myIOTSerial::loop();        // has a task
+    #endif
 }

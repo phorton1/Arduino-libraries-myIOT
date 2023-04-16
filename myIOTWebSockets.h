@@ -10,7 +10,7 @@
 
 
 #if WITH_WS
-#define WS_WITH_TASK
+#define WS_TASK
 
 
 
@@ -24,7 +24,10 @@ class myIOTWebSockets
         static void setup();
         static void begin();
         static void end();
-        static void loop();
+
+        #ifndef WS_TASK
+            static void loop();
+        #endif
 
         static void broadcast(const char *msg);
 
@@ -44,7 +47,7 @@ class myIOTWebSockets
         static void sendTXT(int num, const char *msg);
         static void onDeleteFile(int num, String filename);
 
-        #ifdef WS_WITH_TASK
+        #ifdef WS_TASK
             static void webSocketTask(void *param);
         #endif
 

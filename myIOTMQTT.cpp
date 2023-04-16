@@ -10,7 +10,7 @@
 #include "myIOTLog.h"
 
 
-#define WITH_MQTT_TASK    1
+
 #define MQQT_TASK_STACK   4096
     // MQQT must use a task if there is a likelyhood of the server
     // not being available (and ID_MQTT_IP is set) or else the system
@@ -38,7 +38,7 @@ void myIOTMQTT::setup()
     LOGD("myIOTMQTT::setup() started");
     proc_entry();
 
-    #if WITH_MQTT_TASK
+    #ifdef MQTT_TASK
         LOGI("starting MQTT Task");
         xTaskCreate(MQTTConnectTask,
             "MQTTConnectTask",
@@ -190,13 +190,12 @@ void myIOTMQTT::MQTTConnectTask(void *is_task)
 }
 
 
-
-void myIOTMQTT::loop()
-{
-    #if !WITH_MQTT_TASK
+#ifndef MQTT_TASK
+    void myIOTMQTT::loop()
+    {
         MQTTConnectTask(NULL);
-    #endif
-}
+    }
+#endif
 
 
 #endif  // WITH_MQTT

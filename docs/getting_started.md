@@ -45,7 +45,6 @@ sketch.
 - **WITH_MQTT** default(0) - includes MQTT publication/subscription capabilities
 - **WITH_TELNET** default(0) - includes a Telnet Serial Client
 - **WITH_SD** default(0) - includes SD card and Logging to it
-- **WITH_BASIC_OTA** default(0) - includes Esperif's OTA capabilities, regardless of other settings
 - **DEFAULT_DEVICE_WIFI** default(1) - determines whether or not myIOT Wifi is turned on, or off, by default
 
 It is useful to present these defines here so that you can see how the basic Arduino Library dependencies work

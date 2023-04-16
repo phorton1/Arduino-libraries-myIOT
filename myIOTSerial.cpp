@@ -6,7 +6,7 @@
 #include "myIOTLog.h"
 
 
-#define WITH_KBD_TASK    1
+
 #define KBD_TASK_STACK   4096
 
 
@@ -113,7 +113,7 @@ void myIOTSerial::begin()
         init_telnet();
     #endif
 
-    #if WITH_KBD_TASK
+    #ifdef SERIAL_TASK
         // Must run on ESP32_CORE_ARDUINO==1
         // Cannot run on ESP32_CORE_OTHER==0
         // see notes in bilgeAlarm.cpp lcdPrint()
@@ -177,10 +177,11 @@ void myIOTSerial::loop_private()
 }
 
 
-void myIOTSerial::loop()
-{
-    #if !WITH_KBD_TASK
+
+#ifndef SERIAL_TASK
+    void myIOTSerial::loop()
+    {
         loop_private();
         delay(1);
-    #endif
-}
+    }
+#endif

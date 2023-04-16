@@ -22,8 +22,6 @@
 
 extern uint32_t iot_log_level;       // what is written to log file
 extern uint32_t iot_debug_level;     // what is written to screen
-extern bool iot_inhibit_cr;
-#define inhibitCr()     iot_inhibit_cr=true
 
 #define PROC_ENTRY_AS_METHOD  0
 

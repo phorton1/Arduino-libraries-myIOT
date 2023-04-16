@@ -8,6 +8,8 @@
 
 #if WITH_MQTT
 
+#define MQTT_TASK
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -20,7 +22,10 @@ class myIOTMQTT
         ~myIOTMQTT();
 
         void setup();
-        void loop();
+
+        #ifndef MQTT_TASK
+            void loop();
+        #endif
 
         void publishTopic(const char *name, String value, bool retain = false);
 

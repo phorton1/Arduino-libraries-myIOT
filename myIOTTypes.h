@@ -35,10 +35,6 @@
     #define WITH_SD     0
 #endif
 
-#ifndef WITH_BASIC_OTA
-    #define WITH_BASIC_OTA     0
-#endif
-
 #ifndef DEFAULT_DEVICE_WIFI
     #define DEFAULT_DEVICE_WIFI 1
 #endif

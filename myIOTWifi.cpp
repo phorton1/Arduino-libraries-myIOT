@@ -67,35 +67,6 @@
 // Websockets, OTA, etc.
 
 
-
-// BasicOTA with authentication can only effectively be used from the Arduino IDE.
-// Otherwise I'd have to write a different Komodo script which calls the Arduino
-// to compile the program, but espota.exe to upload it.  The Arduino IDE knows how
-// to send the password to basic OTA.
-
-// FWIW, There's an example of a call to espota.exe in the upload_spiffs.pm script,
-// but it generally does not work well (gets errors at the very end of uploading the
-// 'data' directory, though it seems to have worked for the most part). Only with
-// different SPIFFS partitioning was I able to get data upload to OTA to work.
-//
-// Basically "Basic OTA" is not useful for my purposes. Instead, I will use
-// my own Web Browser based "Upload OTA" method.
-//
-// ps:   When basic OTA is on, I've found it hard to get the ArduinoIDE to see
-// the "network port".  One thing that seemed to work was rebooting windows
-// with the device running (on external power).  Maybe Win10 only checks for
-// mDNS thingees at startup ?!?
-
-
-#if WITH_BASIC_OTA
-    // OTA security is pretty sketchy.
-    // We only start it upon entering STA mode.
-
-    #include <ArduinoOTA.h>
-#endif
-
-
-
 #define DEBUG_WIFI      1
 
 #define WIFI_CONNECT_TIMEOUT    15000
@@ -113,70 +84,6 @@ bool myIOTWifi::m_suppress_auto_sta;
 String myIOTWifi::m_ip_address;
 
 static uint32_t g_reconnect = 0;
-
-
-#if WITH_BASIC_OTA
-    static bool ota_started = false;
-    static void startArduinoOTA()
-    {
-        // Port defaults to 3232
-        // ArduinoOTA.setPort(3232);
-        // Hostname defaults to esp3232-[MAC]
-        // ArduinoOTA.setHostname("myesp32");
-        // No authentication by default
-        // ArduinoOTA.setPassword("admin");
-        // Password can be set with it's md5 value as well
-        // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-        // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
-
-        if (ota_started)
-        {
-            ota_started = false;
-            LOGI("Stopping ArduinoOTA");
-            ArduinoOTA.end();
-        }
-        LOGI("Starting ArduinoOTA");
-
-        ArduinoOTA
-            .onStart([]()
-            {
-                String type;
-                if (ArduinoOTA.getCommand() == U_FLASH)
-                    type = "sketch";
-                else // U_SPIFFS
-                    type = "filesystem";
-                // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-                Serial.println("Start updating " + type);
-            })
-            .onEnd([]()
-            {
-                Serial.println("\nEnd");
-            })
-            .onProgress([](unsigned int progress, unsigned int total)
-            {
-                Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-            })
-            .onError([](ota_error_t error)
-            {
-                Serial.printf("Error[%u]: ", error);
-                if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-                else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-                else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-                else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-                else if (error == OTA_END_ERROR) Serial.println("End Failed");
-            });
-
-        String ota_pass = my_iot_device->getPrefString("OTA_PASS");
-        if (ota_pass != "")
-        {
-            LOGD("Setting ArduinoOTA password");
-            ArduinoOTA.setPassword(ota_pass.c_str());
-        }
-        ArduinoOTA.begin();
-        ota_started = true;
-    }
-#endif
-
 
 
 void myIOTWifi::suppressAutoConnectSTA()
@@ -263,16 +170,8 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
             delay(400);
         }
 
-        #if DEBUG_WIFI
-            // soley for display of WIFI events during ... line
-            extern bool wifi_in_connect;
-            wifi_in_connect = true;
-        #endif
-
         if (WiFi.status() == WL_CONNECTED)
         {
-            if (iot_debug_level >= LOG_LEVEL_DEBUG)
-                inhibitCr();
             WiFi.disconnect();   // station only
             LOGD("Disconnecting station ...");
             uint32_t start = millis();
@@ -284,15 +183,8 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
                     break;
                 }
                 delay(500);
-                if (iot_debug_level >= LOG_LEVEL_DEBUG)
-                    Serial.print(".");
             }
-            if (iot_debug_level >= LOG_LEVEL_DEBUG)
-                LOGD("");
         }
-
-        if (iot_debug_level >= LOG_LEVEL_DEBUG)
-            inhibitCr();
 
         #if DEBUG_PASSWORDS
             LOGD("Connecting to (%s:%s)",sta_ssid.c_str(),sta_pass.c_str());
@@ -309,20 +201,12 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
         while (WiFi.status() != WL_CONNECTED)
         {
             delay(500);
-            if (iot_debug_level >= LOG_LEVEL_DEBUG)
-                Serial.print(".");
             if (millis() > start + WIFI_CONNECT_TIMEOUT)
             {
                 timeout = true;
                 break;
             }
         }
-        if (iot_debug_level >= LOG_LEVEL_DEBUG)
-            LOGD("");
-
-        #if DEBUG_WIFI
-            wifi_in_connect = false;
-        #endif
 
         if (timeout)
         {
@@ -341,9 +225,6 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
             }
             else
             {
-                #if WITH_BASIC_OTA
-                    startArduinoOTA();
-                #endif
                 my_iot_device->onConnectStation();
             }
         }
@@ -444,41 +325,9 @@ void myIOTWifi::loop()
         m_connect_status &= ~IOT_CONNECT_AP;
         delay(400);
         WiFi.mode(WIFI_STA);    // required to turn off the AP
-
-        #if WITH_BASIC_OTA
-            startArduinoOTA();
-        #endif
         my_iot_device->onConnectStation();
     }
 
-    #if WITH_BASIC_OTA
-    if (m_connect_status == IOT_CONNECT_STA)
-        ArduinoOTA.handle();
-    #endif
 
 
-    #if 0
-        // print the time every 30 seconds
-        if (m_connect_status & IOT_CONNECT_STA)
-        {
-            uint32_t now = millis();
-            static uint32_t last_time = 0;
-            if (now > last_time + 30000)
-            {
-                last_time = now;
-                struct tm timeinfo;
-                if (!getLocalTime(&timeinfo))
-                {
-                    LOGW("Failed to obtain time");
-                }
-                else
-                {
-                    char timeStringBuff[50]; //50 chars should be enough
-                    strftime(timeStringBuff, sizeof(timeStringBuff), "%A, %B %d %Y %H:%M:%S", &timeinfo);
-                    Serial.println(timeStringBuff);
-                    // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-                }
-            }
-        }
-    #endif
 }

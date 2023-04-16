@@ -5,9 +5,6 @@
 #include "myIOTLog.h"
 
 
-bool wifi_in_connect = false;
-	// externed and set to true when in a connection with ....'s
-
 static const char *wifiEventName(WiFiEvent_t event)
 {
 	switch (event)
@@ -44,11 +41,6 @@ static const char *wifiEventName(WiFiEvent_t event)
 
 static void onWiFiEvent(WiFiEvent_t event)
 {
-	if (iot_debug_level >= LOG_LEVEL_DEBUG && wifi_in_connect)
-	{
-		Serial.println();
-		inhibitCr();
-	}
 	LOGD("WIFI_EVENT(%d) %s",event,wifiEventName(event));
 }
 
