@@ -22,6 +22,9 @@
 #include <esp_partition.h>
 #include <rom/rtc.h>
 
+#if WITH_WS
+    #include "myIOTWebSockets.h"
+#endif
 
 #if WITH_MQTT
     #include "myIOTMQTT.h"

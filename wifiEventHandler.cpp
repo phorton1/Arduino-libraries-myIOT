@@ -1,6 +1,6 @@
 // a wifi event handler for debugging
 
-#include <Arduino.h>
+
 #include <WiFi.h>
 #include "myIOTLog.h"
 

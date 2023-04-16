@@ -8,10 +8,6 @@
 
 #include "myIOTValue.h"
 
-#if WITH_WS
-    #include "myIOTWebSockets.h"
-#endif
-
 
 #define IOT_DEVICE          "myIOTDevice"
 #define IOT_DEVICE_VERSION  "iot0.05"

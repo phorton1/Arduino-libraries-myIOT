@@ -4,9 +4,7 @@
 
 #pragma once
 
-#include <Arduino.h>
-#include <time.h>
-
+#include "myIOTTypes.h"
 
 #define LOG_LEVEL_NONE          0
 #define LOG_LEVEL_USER          1

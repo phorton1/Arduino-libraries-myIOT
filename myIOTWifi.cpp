@@ -58,7 +58,6 @@
 #include "myIOTLog.h"
 #include <WiFi.h>
 #include <esp_wifi_types.h>
-#include <time.h>
 
 // Basic security scheme.
 //

@@ -5,7 +5,7 @@
 #pragma once
 
 #include "myIOTTypes.h"
-#include <Preferences.h>
+
 
 
 class myIOTValue
@@ -87,7 +87,6 @@ class myIOTValue
     private:
 
         static bool m_prefs_inited;
-        static Preferences m_preferences;
 
         const valDescriptor *m_desc;
 

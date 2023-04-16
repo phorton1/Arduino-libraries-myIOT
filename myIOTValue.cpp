@@ -8,9 +8,8 @@
 #include "myIOTDevice.h"
 #include "myIOTLog.h"
 #include <string>
-#include <vector>
 #include <stdlib.h>
-
+#include <Preferences.h>
 
 #define FIXED_FLOAT_PRECISION 3
 
@@ -24,7 +23,7 @@
 
 
 bool myIOTValue::m_prefs_inited = false;
-Preferences myIOTValue::m_preferences;
+static Preferences g_preferences;
 
 
 
@@ -44,7 +43,7 @@ static uint32_t getEnumMax(enumValue *ptr)
 
 void myIOTValue::initPrefs()
 {
-    m_preferences.clear();
+    g_preferences.clear();
 }
 
 
@@ -55,7 +54,7 @@ void myIOTValue::init()
     if (!m_prefs_inited)
     {
         m_prefs_inited = true;
-        m_preferences.begin("");
+        g_preferences.begin("");
     }
 
     #if DEBUG_VALUES > 1
@@ -80,7 +79,7 @@ void myIOTValue::init()
                 {
                     bool val = m_desc->int_range.default_value;
                     if (store & VALUE_STORE_NVS)
-                        val = m_preferences.getUChar(id,val);
+                        val = g_preferences.getUChar(id,val);
                     *ptr = val;
                 }
                 break;
@@ -92,7 +91,7 @@ void myIOTValue::init()
                 {
                     char val = m_desc->default_value[0];
                     if (store & VALUE_STORE_NVS)
-                        val = m_preferences.getChar(id,val);
+                        val = g_preferences.getChar(id,val);
                     *ptr = val;
                 }
                 break;
@@ -104,7 +103,7 @@ void myIOTValue::init()
                 {
                     int val = m_desc->int_range.default_value;
                     if (store & VALUE_STORE_NVS)
-                        val = m_preferences.getInt(id,val);
+                        val = g_preferences.getInt(id,val);
                     *ptr = val;
                 }
                 break;
@@ -116,7 +115,7 @@ void myIOTValue::init()
                 {
                     float val = m_desc->float_range.default_value;
                     if (store & VALUE_STORE_NVS)
-                        val = m_preferences.getFloat(id,val);
+                        val = g_preferences.getFloat(id,val);
                     *ptr = val;
                 }
                 break;
@@ -128,7 +127,7 @@ void myIOTValue::init()
                 {
                     time_t val = 0;
                     if (store & VALUE_STORE_NVS)
-                        val = m_preferences.getUInt(id,val);
+                        val = g_preferences.getUInt(id,val);
                     *ptr = val;
                 }
                 break;
@@ -140,7 +139,7 @@ void myIOTValue::init()
                 {
                     String val = m_desc->default_value;
                     if (store & VALUE_STORE_NVS)
-                        val = m_preferences.getString(id,val);
+                        val = g_preferences.getString(id,val);
                     *ptr = val;
                 }
                 break;
@@ -152,7 +151,7 @@ void myIOTValue::init()
                 {
                     uint32_t val = m_desc->int_range.default_value;
                     if (store & VALUE_STORE_NVS)
-                        val = m_preferences.getUInt(id,val);
+                        val = g_preferences.getUInt(id,val);
                     *ptr = val;
                 }
                 break;
@@ -164,7 +163,7 @@ void myIOTValue::init()
                 {
                     uint32_t val = 0;
                     if (store & VALUE_STORE_NVS)
-                        val = m_preferences.getUInt(id,val);
+                        val = g_preferences.getUInt(id,val);
                     *ptr = val;
                 }
                 break;
@@ -204,7 +203,7 @@ void myIOTValue::checkRequired(const char *val)
 void myIOTValue::clearNVSValue()
 {
     LOGD("clearNVSValue(%s)",m_desc->id);
-    m_preferences.remove(m_desc->id);
+    g_preferences.remove(m_desc->id);
 }
 
 
@@ -227,7 +226,7 @@ bool myIOTValue::getBool()
     bool def = m_desc->int_range.default_value;
     bool val =
         ptr ? *ptr :
-        m_desc->store & VALUE_STORE_NVS ? m_preferences.getUChar(m_desc->id,def) :
+        m_desc->store & VALUE_STORE_NVS ? g_preferences.getUChar(m_desc->id,def) :
         def;
     return val;
 }
@@ -240,7 +239,7 @@ char myIOTValue::getChar()
     char def = m_desc->default_value[0];
     char val =
         ptr ? *ptr :
-        m_desc->store & VALUE_STORE_NVS ? m_preferences.getChar(m_desc->id,def) :
+        m_desc->store & VALUE_STORE_NVS ? g_preferences.getChar(m_desc->id,def) :
         def;
     return val;
 }
@@ -254,7 +253,7 @@ int myIOTValue::getInt()
     int def = m_desc->int_range.default_value;
     int val =
         ptr ? *ptr :
-        m_desc->store & VALUE_STORE_NVS ? m_preferences.getInt(m_desc->id,def) :
+        m_desc->store & VALUE_STORE_NVS ? g_preferences.getInt(m_desc->id,def) :
         def;
     return val;
 }
@@ -267,7 +266,7 @@ float myIOTValue::getFloat()
     float def = m_desc->float_range.default_value;
     float val =
         ptr ? *ptr :
-        m_desc->store & VALUE_STORE_NVS ? m_preferences.getFloat(m_desc->id,def) :
+        m_desc->store & VALUE_STORE_NVS ? g_preferences.getFloat(m_desc->id,def) :
         def;
     return val;
 }
@@ -280,7 +279,7 @@ time_t myIOTValue::getTime()
     time_t def = 0;
     time_t val =
         ptr ? *ptr :
-        m_desc->store & VALUE_STORE_NVS ? m_preferences.getUInt(m_desc->id,def) :
+        m_desc->store & VALUE_STORE_NVS ? g_preferences.getUInt(m_desc->id,def) :
         def;
     return val;
 }
@@ -293,7 +292,7 @@ String myIOTValue::getString()
     String def = m_desc->default_value;
     String val =
         ptr ? *ptr :
-        m_desc->store & VALUE_STORE_NVS ? m_preferences.getString(m_desc->id,def) :
+        m_desc->store & VALUE_STORE_NVS ? g_preferences.getString(m_desc->id,def) :
         def;
     return val;
 }
@@ -306,7 +305,7 @@ uint32_t myIOTValue::getEnum()
     uint32_t def = m_desc->enum_range.default_value;
     uint32_t val =
         ptr ? *ptr :
-        m_desc->store & VALUE_STORE_NVS ? m_preferences.getInt(m_desc->id,def) :
+        m_desc->store & VALUE_STORE_NVS ? g_preferences.getInt(m_desc->id,def) :
         def;
     return val;
 }
@@ -320,7 +319,7 @@ uint32_t myIOTValue::getBenum()
     uint32_t def = 0;
     uint32_t val =
         ptr ? *ptr :
-        m_desc->store & VALUE_STORE_NVS ? m_preferences.getUInt(m_desc->id,def) :
+        m_desc->store & VALUE_STORE_NVS ? g_preferences.getUInt(m_desc->id,def) :
         def;
     return val;
 }
@@ -399,7 +398,7 @@ void myIOTValue::setBool(bool val, valueStore from)
     if (ptr) *ptr = val;
 ;
     if (m_desc->store & VALUE_STORE_NVS)
-        if (m_preferences.putUChar(m_desc->id,val) != sizeof(unsigned char))
+        if (g_preferences.putUChar(m_desc->id,val) != sizeof(unsigned char))
             throw String("Could not putUChar in NVS");
 
     publish(String(val),from);
@@ -422,7 +421,7 @@ void myIOTValue::setChar(char val, valueStore from)
     if (ptr) *ptr = val;
 
     if (m_desc->store & VALUE_STORE_NVS)
-        if (m_preferences.putChar(m_desc->id,val) != sizeof(char))
+        if (g_preferences.putChar(m_desc->id,val) != sizeof(char))
             throw String("Could not putChar in NVS");
 
     publish(String(val),from);
@@ -457,7 +456,7 @@ void myIOTValue::setInt(int val, valueStore from)
     if (ptr) *ptr = val;
 
     if (m_desc->store & VALUE_STORE_NVS)
-        if (m_preferences.putInt(m_desc->id,val) != sizeof(int))
+        if (g_preferences.putInt(m_desc->id,val) != sizeof(int))
             throw String("Could not putInt in NVS");
 
     publish(String(val),from);
@@ -485,7 +484,7 @@ void myIOTValue::setFloat(float val, valueStore from)
     if (ptr) *ptr = val;
 
     if (m_desc->store & VALUE_STORE_NVS)
-        if (m_preferences.putFloat(m_desc->id,val) != sizeof(float))
+        if (g_preferences.putFloat(m_desc->id,val) != sizeof(float))
             throw String("Could not putFloat in NVS");
 
     publish(String(val,FIXED_FLOAT_PRECISION),from);
@@ -508,7 +507,7 @@ void myIOTValue::setTime(time_t val, valueStore from)
     if (ptr) *ptr = val;
 
     if (m_desc->store & VALUE_STORE_NVS)
-        if (m_preferences.putUInt(m_desc->id,val) != sizeof(time_t))
+        if (g_preferences.putUInt(m_desc->id,val) != sizeof(time_t))
             throw String("Could not putTime in NVS");
 
     publish(val?timeToString(val):String(""),from);
@@ -536,7 +535,7 @@ void myIOTValue::setString(const char *val, valueStore from)
     if (ptr) *ptr = val;
 
     if (m_desc->store & VALUE_STORE_NVS)
-        if (m_preferences.putString(m_desc->id,val) != strlen(val))
+        if (g_preferences.putString(m_desc->id,val) != strlen(val))
             throw String("Could not putString in NVS");
 
     publish(String(val),from);
@@ -564,7 +563,7 @@ void myIOTValue::setEnum(uint32_t val, valueStore from)
     if (ptr) *ptr = val;
 
     if (m_desc->store & VALUE_STORE_NVS)
-        if (m_preferences.putUInt(m_desc->id,val) != sizeof(uint32_t))
+        if (g_preferences.putUInt(m_desc->id,val) != sizeof(uint32_t))
             throw String("Could not putEnum in NVS");
 
     // note for MQTT: enums get published as strings
@@ -591,7 +590,7 @@ void myIOTValue::setBenum(uint32_t val, valueStore from)
     if (ptr) *ptr = val;
 
     if (m_desc->store & VALUE_STORE_NVS)
-        if (m_preferences.putUInt(m_desc->id,val) != sizeof(int))
+        if (g_preferences.putUInt(m_desc->id,val) != sizeof(int))
             throw String("Could not putUInt in NVS");
 
     publish(getAsString(),from);

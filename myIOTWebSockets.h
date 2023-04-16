@@ -5,7 +5,6 @@
 #pragma once
 
 #include "myIOTTypes.h"
-#include <Arduino.h>
 #include <WebSocketsServer.h>
 
 
@@ -35,8 +34,6 @@ class myIOTWebSockets
 
 
     protected:
-
-        static myIOTWebSockets *m_this;
 
         static WebSocketsServer m_web_sockets;
 
