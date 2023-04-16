@@ -499,7 +499,7 @@ void myIOTWebSockets::webSocketEvent(uint8_t num, WStype_t ws_type, uint8_t *dat
         case WStype_FRAGMENT_FIN :
         case WStype_PING :
         case WStype_PONG :
-            LOGE("Unsupported ws_type(%d)",ws_type);
+            LOGV("Unsupported ws_type(%d)",ws_type);
             break;
     }
 }
