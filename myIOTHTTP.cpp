@@ -259,7 +259,7 @@ void myIOTHTTP::onConnectStation()
             }
             else
             {
-                LOGE("NTP try(%d) failed!!");
+                LOGE("NTP try(%d) failed!!",count);
             }
         }
 
