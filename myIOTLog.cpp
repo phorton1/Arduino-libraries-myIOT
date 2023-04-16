@@ -100,8 +100,9 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 		{
 			case LOG_LEVEL_ERROR   : color = MSG_COLOR_RED; break;
 			case LOG_LEVEL_WARNING : color = MSG_COLOR_YELLOW; break;
-			case LOG_LEVEL_INFO    : color = MSG_COLOR_GREEN; break;
-			case LOG_LEVEL_DEBUG   : color = MSG_COLOR_CYAN; break;
+			case LOG_LEVEL_INFO    : color = MSG_COLOR_CYAN; break;
+			case LOG_LEVEL_DEBUG   : color = MSG_COLOR_GREEN; break;
+			case LOG_LEVEL_VERBOSE : color = MSG_COLOR_MAGENTA; break;
 		}
 		mycat(display_buf,color,&raw_buf);
 	#endif
