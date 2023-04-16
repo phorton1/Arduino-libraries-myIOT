@@ -5,10 +5,8 @@
 #pragma once
 
 #include <Arduino.h>
-// grrrrr - getting unresolved references to time variables when in theClock3.cpp
-// when I removed uneeded WebSockets.h from myIOTDevice.h
-// But they get fixed when I needlessly include WiFi.h here:
 #include <WiFi.h>
+
 
 
 #define DEBUG_PASSWORDS  0

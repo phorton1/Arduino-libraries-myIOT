@@ -272,8 +272,6 @@ String myIOTWebSockets::deviceInfoJson()
 {
     DynamicJsonDocument doc(1024);
 
-    wifi_mode_t mode = WiFi.getMode();
-
     doc["uuid"] = my_iot_device->getUUID();
     doc["device_type"] = my_iot_device->getDeviceType();
     doc["device_name"] = my_iot_device->getName();
@@ -292,6 +290,8 @@ String myIOTWebSockets::deviceInfoJson()
 
 #if DEBUG_CAPTIVE_WS
     // information added only for sake of debuging the captive Portal
+
+    wifi_mode_t mode = WiFi.getMode();
 
     doc["wifi_mode"] =
         mode == WIFI_MODE_AP ? "WIFI_AP" :
@@ -342,6 +342,7 @@ void myIOTWebSockets::webSocketEvent(uint8_t num, WStype_t ws_type, uint8_t *dat
             }
             break;
         case WStype_TEXT:
+        {
             #if 1
                 if (!strstr((const char *)data,"ping") &&
                     !strstr((const char *)data,"device_info") &&
@@ -488,7 +489,17 @@ void myIOTWebSockets::webSocketEvent(uint8_t num, WStype_t ws_type, uint8_t *dat
             {
                 LOGE("WS deserializeJson() failed with code %s",err.f_str());
             }
-
+            break;
+        }
+        case WStype_ERROR :
+        case WStype_BIN :
+        case WStype_FRAGMENT_TEXT_START :
+        case WStype_FRAGMENT_BIN_START :
+        case WStype_FRAGMENT :
+        case WStype_FRAGMENT_FIN :
+        case WStype_PING :
+        case WStype_PONG :
+            LOGE("Unsupported ws_type(%d)",ws_type);
             break;
     }
 }

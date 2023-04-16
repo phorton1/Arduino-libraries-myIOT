@@ -548,7 +548,7 @@ void myIOTHTTP::handle_fileUpload(bool sdcard, fs::FS the_fs)
             for (int i=0; i<web_server.args(); i++)
             {
                 String arg_name = web_server.argName(i);
-                if (arg_name.endsWith("_size") >= 0)
+                if (arg_name.endsWith("_size"))
                 {
                     m_upload_total += web_server.arg(i).toInt();
                 }

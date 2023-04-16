@@ -49,8 +49,9 @@
 uint32_t iot_log_level = LOG_LEVEL_INFO;
 uint32_t iot_debug_level = LOG_LEVEL_DEBUG;
 volatile int iot_proc_level = 0;
-static bool logfile_error = 0;
-
+#if WITH_SD
+	static bool logfile_error = 0;
+#endif
 
 
 #if PROC_ENTRY_AS_METHOD
@@ -180,7 +181,8 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 	// output non verbose messages to logfile
 
     #if WITH_SD
-		if (level < LOG_LEVEL_VERBOSE &&
+		if (!logfile_error &&
+			level < LOG_LEVEL_VERBOSE &&
 			iot_log_level >= level &&
 			myIOTDevice::hasSD())
 		{

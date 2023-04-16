@@ -25,10 +25,10 @@ class myIOTValue
             // called from factoryReset(), restart the m_preferences member
             // so we can write the RESET_COUNT for next boot
 
-        const   valueIdType getId()    const { return m_desc->id; }
-        const   valueType   getType()  const { return m_desc->type; }
-        const   valueStore  getStore() const { return m_desc->store; }
-        const   valueStyle  getStyle() const { return m_desc->style; }
+        valueIdType getId()    const { return m_desc->id; }
+        valueType   getType()  const { return m_desc->type; }
+        valueStore  getStore() const { return m_desc->store; }
+        valueStyle  getStyle() const { return m_desc->style; }
 
         void     invoke();
         bool     getBool();

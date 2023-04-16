@@ -2,8 +2,6 @@
 // myIOTValue.h
 //--------------------------
 
-#pragma once
-
 #include "myIOTValue.h"
 #include "myIOTDevice.h"
 #include "myIOTLog.h"
@@ -553,7 +551,7 @@ void myIOTValue::setEnum(uint32_t val, valueStore from)
     checkType(VALUE_TYPE_ENUM);
 
     uint32_t max = getEnumMax(m_desc->enum_range.allowed);
-    if (val<0 || val>max)
+    if (val>max)
         throw String("enum(" + String(val) + ") is out of range 0.." + String(max));
 
     enumChangeFxn fxn = (enumChangeFxn) m_desc->fxn_ptr;
@@ -758,7 +756,7 @@ void myIOTValue::setFromString(const char *ptr, valueStore from)
                             break;
                         }
                         num++;
-                        *p++;
+                        p++;
                     }
                     if (!found)
                         throw String("illegal enum value(" + String(ptr) + ")");
@@ -870,7 +868,7 @@ void myIOTValue::publish(String val, valueStore from /*=VALUE_STORE_PROG*/)
             type == VALUE_TYPE_TIME ||
             type == VALUE_TYPE_ENUM ||
             type == VALUE_TYPE_BENUM ||
-            m_desc->type == VALUE_TYPE_INT && (m_desc->style & VALUE_STYLE_OFF_ZERO) && str_value == "off";
+            (m_desc->type == VALUE_TYPE_INT && (m_desc->style & VALUE_STYLE_OFF_ZERO) && str_value == "off");
         bool has_range =
            type == VALUE_TYPE_INT ||
            type == VALUE_TYPE_FLOAT;

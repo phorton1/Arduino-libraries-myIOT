@@ -34,6 +34,12 @@ static const char *wifiEventName(WiFiEvent_t event)
 		case SYSTEM_EVENT_ETH_CONNECTED         : return "ETH_CONNECTED	ESP32";
 		case SYSTEM_EVENT_ETH_DISCONNECTED	    : return "ETH_DISCONNECTED";
 		case SYSTEM_EVENT_ETH_GOT_IP	        : return "ETH_GOT_IP";
+
+		// added to avoid compiler warnings
+
+		case SYSTEM_EVENT_STA_WPS_ER_PBC_OVERLAP : return "STA_WPS_ER_PBC_OVERLAP";
+		case SYSTEM_EVENT_MAX                    : return "EVENT_MAX";
+
 	}
 	return "UNKNOWN_WIFI_EVENT";
 }
