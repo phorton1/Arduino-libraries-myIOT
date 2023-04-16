@@ -57,3 +57,9 @@ class myIOTHTTP
         static void sendUploadProgress(int every, bool finished=false, bool error=false);
 
 };
+
+
+
+
+extern myIOTHTTP    my_iot_http;
+

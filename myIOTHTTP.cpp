@@ -54,6 +54,8 @@ uint32_t myIOTHTTP::m_upload_bytes = 0;
 String myIOTHTTP::m_upload_filename;
 String myIOTHTTP::m_upload_request_id;
 
+myIOTHTTP my_iot_http;
+
 
 //-------------------------------------------------------
 // utilities

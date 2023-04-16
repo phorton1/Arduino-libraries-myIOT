@@ -36,3 +36,5 @@ class myIOTWifi
         static String m_ip_address;
         static bool m_suppress_auto_sta;
 };
+
+extern myIOTWifi my_iot_wifi;

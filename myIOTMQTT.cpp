@@ -8,7 +8,8 @@
 
 #include "myIOTDevice.h"
 #include "myIOTLog.h"
-
+#include <WiFi.h>
+#include <PubSubClient.h>
 
 
 #define MQQT_TASK_STACK   4096
@@ -18,18 +19,19 @@
     // as the connect hangs the main thread.
 
 
-myIOTMQTT *myIOTMQTT::m_this = NULL;
+myIOTMQTT my_iot_mqtt;
+static WiFiClient wifi_client;
+static PubSubClient mqtt_client(wifi_client);
+
 
 
 myIOTMQTT::~myIOTMQTT()
 {}
 
 
-myIOTMQTT::myIOTMQTT() :
-    m_mqtt_client(m_wifi_client)
+myIOTMQTT::myIOTMQTT()
 {
     LOGD("myIOTMQTT::ctor()");
-    m_this = this;
 }
 
 
@@ -57,12 +59,12 @@ void myIOTMQTT::setup()
 void myIOTMQTT::publishTopic(const char *name, String value, bool retain /*=false*/)
 {
     LOGD("myIOTMQTT::publishTopic(%s,%d)='%s'",name,retain,value.c_str());
-    if (m_mqtt_client.connected())
+    if (mqtt_client.connected())
     {
         // Topics are prefixed using the user-defined thing name, whatever that is
         String topic = my_iot_device->getName() + "/" + name;
         LOGD("    sending topic(%s,%d)='%s'",topic.c_str(),retain,value.c_str());
-        if (!m_mqtt_client.publish(topic.c_str(),value.c_str(),retain))
+        if (!mqtt_client.publish(topic.c_str(),value.c_str(),retain))
             LOGE("could not publish topic(%s,%d)='%s'",topic.c_str(),retain,value.c_str());
     }
 }
@@ -96,7 +98,7 @@ void myIOTMQTT::MQTTCallback(char* ctopic, byte* cmsg, unsigned int len)
 // static
 void myIOTMQTT::MQTTConnect()
 {
-    if (!m_this->m_mqtt_client.connected())
+    if (!mqtt_client.connected())
     {
         static int req_num = 0;
 
@@ -107,10 +109,10 @@ void myIOTMQTT::MQTTConnect()
         LOGD("MQTTConnect(%s,%s,%s)",client_id.c_str(),mqtt_user.c_str(),mqtt_pass.c_str());
         proc_entry();
 
-        if (m_this->m_mqtt_client.connect(client_id.c_str(),mqtt_user.c_str(),mqtt_pass.c_str()))
+        if (mqtt_client.connect(client_id.c_str(),mqtt_user.c_str(),mqtt_pass.c_str()))
         {
             LOGI("MQTT Connected");
-            m_this->m_mqtt_client.setCallback(MQTTCallback);
+            mqtt_client.setCallback(MQTTCallback);
             for (auto value:my_iot_device->getValues())
             {
                 valueStore store = value->getStore();
@@ -122,7 +124,7 @@ void myIOTMQTT::MQTTConnect()
                         String topic = my_iot_device->getName() + "/";
                         topic += value->getId();
                         LOGD("    connect subscribing to topic(%s)",topic.c_str());
-                        m_this->m_mqtt_client.subscribe(topic.c_str());
+                        mqtt_client.subscribe(topic.c_str());
                     }
 
                     if (store & VALUE_STORE_MQTT_PUB &&
@@ -137,7 +139,7 @@ void myIOTMQTT::MQTTConnect()
         }
         else
         {
-            LOGW("MQTT Connect failed status code =%d",m_this->m_mqtt_client.state());
+            LOGW("MQTT Connect failed status code =%d",mqtt_client.state());
         }
 
         proc_leave();
@@ -150,15 +152,16 @@ void myIOTMQTT::MQTTConnectTask(void *is_task)
     // if param is not NULL this is a real task,
     // otherwise it's a timeslice called from loop()
 {
-    bool first_time = true;
     if (is_task)
     {
         vTaskDelay(2000);
         LOGI("starting MQQTConnectTask loop on core(%d)",xPortGetCoreID());
     }
 
+    bool first_time = true;
     while (first_time || is_task)
     {
+        first_time = false;
         if (is_task)
             vTaskDelay(1);
 
@@ -172,20 +175,18 @@ void myIOTMQTT::MQTTConnectTask(void *is_task)
                 int mqtt_port = my_iot_device->getInt(ID_MQTT_PORT);
                 if (mqtt_ip != "" && mqtt_port)
                 {
-                    if (!m_this->m_mqtt_client.connected())
+                    if (!mqtt_client.connected())
                     {
-                        m_this->m_mqtt_client.setServer(mqtt_ip.c_str(), mqtt_port);
-                        m_this->MQTTConnect();
+                        mqtt_client.setServer(mqtt_ip.c_str(), mqtt_port);
+                        my_iot_mqtt.MQTTConnect();
                         last_uptime = millis();
                     }
                 }
             }
 
             // if (mqtt_client.connected())
-                m_this->m_mqtt_client.loop();
+                mqtt_client.loop();
         }
-
-        first_time = false;
     }
 }
 

@@ -39,6 +39,10 @@ WebSocketsServer myIOTWebSockets::m_web_sockets(WS_PORT);
 static bool started = 0;
 static int connect_count = 0;
 
+myIOTWebSockets my_web_sockets;
+
+
+
 
 myIOTWebSockets::~myIOTWebSockets()
 {}

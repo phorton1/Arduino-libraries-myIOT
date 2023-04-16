@@ -172,16 +172,7 @@ valueIdType *myIOTDevice::m_config_items = NULL;
 valueIdType *myIOTDevice::m_device_items = device_items;
 
 myIOTDevice *my_iot_device;
-myIOTWifi    my_iot_wifi;
-myIOTHTTP    my_iot_http;
 
-#if WITH_WS
-    myIOTWebSockets myIOTDevice::my_web_sockets;
-#endif
-
-#if WITH_MQTT
-    myIOTMQTT my_iot_mqtt;
-#endif
 
 
 // static

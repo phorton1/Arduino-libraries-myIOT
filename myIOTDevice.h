@@ -256,12 +256,6 @@ class myIOTDevice
 
         // working vars
 
-        #if WITH_WS
-            static myIOTWebSockets  my_web_sockets;
-                // a member so that it can be shared across myIOTDevice
-                // source files (i.e. myIOTDeviceValues.cpp)
-        #endif
-
         #if WITH_SD
             static bool m_sd_started;
         #endif

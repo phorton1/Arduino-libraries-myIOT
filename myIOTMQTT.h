@@ -1,6 +1,7 @@
 //--------------------------
 // myIOTMQTT.h
 //--------------------------
+// NEEDS WORK
 
 #pragma once
 
@@ -10,9 +11,6 @@
 
 #define MQTT_TASK
 
-#include <Arduino.h>
-#include <WiFi.h>
-#include <PubSubClient.h>
 
 class myIOTMQTT
 {
@@ -32,16 +30,15 @@ class myIOTMQTT
 
     protected:
 
-        static myIOTMQTT *m_this;
-
-        WiFiClient m_wifi_client;
-        PubSubClient m_mqtt_client;
-
         void MQTTConnect();
         static void MQTTConnectTask(void *is_task);
         static void MQTTCallback(char* ctopic, byte* cmsg, unsigned int len);
 
 };
+
+
+extern myIOTMQTT my_iot_mqtt;
+
 
 
 

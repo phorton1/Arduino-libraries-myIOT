@@ -54,4 +54,8 @@ class myIOTWebSockets
 };
 
 
+
+extern myIOTWebSockets my_web_sockets;
+
+
 #endif  // WITH_WS

@@ -77,13 +77,17 @@
 #define AP_IP       "192.168.1.254"
 #define AP_MASK     "255.255.255.0"
 
+myIOTWifi    my_iot_wifi;
 
 iotConnectStatus_t myIOTWifi::m_connect_status = IOT_CONNECT_NONE;
+
 uint32_t myIOTWifi::m_stop_ap;
 bool myIOTWifi::m_suppress_auto_sta;
 String myIOTWifi::m_ip_address;
 
 static uint32_t g_reconnect = 0;
+
+
 
 
 void myIOTWifi::suppressAutoConnectSTA()
