@@ -30,7 +30,7 @@
 #endif
 
 #ifndef WITH_TELNET
-    #define WITH_TELNET 0
+    #define WITH_TELNET 1
 #endif
 
 #ifndef WITH_SD
