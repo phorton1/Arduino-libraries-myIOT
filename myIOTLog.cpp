@@ -92,7 +92,7 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 
 	int len = 0;
 	char display_buf[MAX_BUFFER+1];		// buffer including color sequence
-	char *raw_buf = display_buf;		// after color sequence
+	char *log_buf = display_buf;		// after color sequence
     char *end = display_buf;			// next position to write at
 
 	#if LOG_ANSI_COLORS
@@ -105,7 +105,7 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 			case LOG_LEVEL_DEBUG   : color = MSG_COLOR_GREEN; break;
 			case LOG_LEVEL_VERBOSE : color = MSG_COLOR_MAGENTA; break;
 		}
-		mycat(display_buf,color,&raw_buf);
+		mycat(display_buf,color,&log_buf);
 	#endif
 
 	#if LOG_TIMESTAMP
@@ -121,7 +121,7 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 		#endif
 
 		tm += " ";
-		mycat(raw_buf,tm.c_str(),&end);
+		mycat(log_buf,tm.c_str(),&end);
 	#endif
 
 	#if LOG_MEM_LEVELS
@@ -165,17 +165,17 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 	strcpy(end,"\n");
 	end++;
 
-	#if LOG_ANSI_COLORS
-		strcpy(end,MSG_COLOR_LIGHT_GREY);
-	#endif
-
 	if (iot_debug_level >= level)
 	{
+		#if LOG_ANSI_COLORS
+			strcpy(end,MSG_COLOR_LIGHT_GREY);
+		#endif
 		Serial.print(display_buf);
 		#if WITH_TELNET
 			if (myIOTSerial::telnetConnected())
 				myIOTSerial::telnet.print(display_buf);
 		#endif
+
 	}
 
 	// output non verbose messages to logfile
@@ -198,7 +198,10 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 			}
 			else
 			{
-				file.print(raw_buf);
+				#if LOG_ANSI_COLORS
+					*end = 0;	// remove the terminating color string
+				#endif
+				file.print(log_buf);
 				file.close();
 			}
 		}

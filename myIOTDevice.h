@@ -10,7 +10,7 @@
 
 
 #define IOT_DEVICE          "myIOTDevice"
-#define IOT_DEVICE_VERSION  "iot0.05"
+#define IOT_DEVICE_VERSION  "iot1.00"
 
 
 #define DEFAULT_AP_PASSWORD   "11111111"
