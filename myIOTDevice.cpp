@@ -77,6 +77,8 @@ static valueIdType device_items[] = {
 #endif
 
     ID_FACTORY_RESET,
+    ID_LAST_BOOT,
+    ID_UPTIME,
     ID_DEVICE_TYPE,
     ID_DEVICE_VERSION,
     ID_DEVICE_UUID,
@@ -114,6 +116,9 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
 #if WITH_WS
     { ID_JSON,          VALUE_TYPE_COMMAND,    VALUE_STORE_PROG,      VALUE_STYLE_VERIFY,     NULL,                       (void *) showJson },
 #endif
+
+    { ID_LAST_BOOT,     VALUE_TYPE_TIME,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_last_boot, },
+    { ID_UPTIME,        VALUE_TYPE_INT,        VALUE_STORE_PUB,       VALUE_STYLE_HIST_TIME,  (void *) &_device_uptime,   NULL, { .int_range = { 0, -DEVICE_MAX_INT-1, DEVICE_MAX_INT}}  },
 
     { ID_DEVICE_BOOTING,VALUE_TYPE_BOOL,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_booting,  },
     { ID_RESET_COUNT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,  { .int_range = { 0, 0, DEVICE_MAX_INT}}  },
@@ -165,7 +170,11 @@ String myIOTDevice::_device_ip;
     String myIOTDevice::_ntp_server;
 #endif
 
+time_t myIOTDevice::_device_last_boot;
+int    myIOTDevice::_device_uptime;
 bool   myIOTDevice::_device_booting;
+
+
 #if WITH_SD
     bool   myIOTDevice::m_sd_started;
 #endif
@@ -493,6 +502,12 @@ void myIOTDevice::setup()
 
     // Finished
 
+    // SET THE LAST_BOOT and UPTIME values
+    // If they were not, but later connect to NTP, it will show 40 years.
+
+    setTime(ID_LAST_BOOT,time(NULL));
+    setInt(ID_UPTIME,_device_last_boot);
+
     proc_leave();
     LOGD("myIOTDevice::setup() completed");
 
@@ -592,8 +607,20 @@ void myIOTDevice::showValues()
     {
         if (value->getType() != VALUE_TYPE_COMMAND)
         {
+            String val = value->getAsString();
             Serial.printf("%-15s = ",value->getId());
-            Serial.println(value->getAsString());
+            Serial.println(val);
+
+        #if WITH_TELNET
+			if (myIOTSerial::telnetConnected())
+            {
+                static char tel_buf[80];
+                sprintf(tel_buf,"%-15s = ",value->getId());
+				myIOTSerial::telnet.print(tel_buf);
+				myIOTSerial::telnet.println(val);
+            }
+		#endif
+
         }
     }
 }
@@ -654,7 +681,15 @@ void myIOTDevice::showValues()
     void myIOTDevice::showJson()
     {
         LOGU("JSON");
-        Serial.print(my_iot_device->valueListJson());
+        String val = my_iot_device->valueListJson();
+        Serial.print(val);
+        #if WITH_TELNET
+			if (myIOTSerial::telnetConnected())
+            {
+				myIOTSerial::telnet.print(val);
+            }
+		#endif
+
     }
 #endif
 

@@ -12,9 +12,10 @@
 #define IOT_DEVICE          "myIOTDevice"
 #define IOT_DEVICE_VERSION  "iot1.00"
 
-
 #define DEFAULT_AP_PASSWORD   "11111111"
 
+#define ID_LAST_BOOT      "LAST_BOOT"
+#define ID_UPTIME         "UPTIME"
 #define ID_REBOOT         "REBOOT"
 #define ID_FACTORY_RESET  "FACTORY_RESET"
 #define ID_VALUES         "VALUES"
@@ -244,10 +245,14 @@ class myIOTDevice
         static String _device_version;
         static bool   _device_wifi;
         static String _device_ip;
+
         #if WITH_NTP
             static IOT_TIMEZONE _device_tz;
             static String _ntp_server;
         #endif
+
+        static time_t _device_last_boot;
+        static int    _device_uptime;
         static bool   _device_booting;
 
         // working vars
