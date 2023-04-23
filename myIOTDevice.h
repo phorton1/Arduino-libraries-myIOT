@@ -227,6 +227,12 @@ class myIOTDevice
             if (device != NULL) m_device_items = device;
         }
 
+        static void onChangeWifi(const myIOTValue *desc, bool val);
+        static bool _device_wifi;
+            // _device_wifi can be changed, and onChangeWifi(NULL,false/true)
+            // called to temporarily turn wifi on or off without actually
+            // changing the preference
+
     private:
 
         // desciptors
@@ -243,7 +249,6 @@ class myIOTDevice
         static String _device_uuid;
         static String _device_type;
         static String _device_version;
-        static bool   _device_wifi;
         static String _device_ip;
 
         #if WITH_NTP
@@ -272,7 +277,7 @@ class myIOTDevice
         void handleKeyboard();
         static void keyboardTask(void *param);
         static void showValues();
-        static void onChangeWifi(const myIOTValue *desc, bool val);
+
 
         #if WITH_WS
             static void showJson();
