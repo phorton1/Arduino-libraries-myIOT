@@ -27,6 +27,7 @@
 #define ID_DEVICE_NAME    "DEVICE_NAME"
 #define ID_DEVICE_WIFI    "WIFI"
 #define ID_DEVICE_IP      "DEVICE_IP"
+#define ID_DEVICE_SSDP    "SSDP"
 
 #if WITH_NTP
 #define ID_DEVICE_TZ      "DEVICE_TZ"
@@ -227,6 +228,7 @@ class myIOTDevice
             if (device != NULL) m_device_items = device;
         }
 
+
         static void onChangeWifi(const myIOTValue *desc, bool val);
         static bool _device_wifi;
             // _device_wifi can be changed, and onChangeWifi(NULL,false/true)
@@ -250,6 +252,7 @@ class myIOTDevice
         static String _device_type;
         static String _device_version;
         static String _device_ip;
+        static bool   _device_ssdp;
 
         #if WITH_NTP
             static IOT_TIMEZONE _device_tz;
@@ -277,7 +280,6 @@ class myIOTDevice
         void handleKeyboard();
         static void keyboardTask(void *param);
         static void showValues();
-
 
         #if WITH_WS
             static void showJson();

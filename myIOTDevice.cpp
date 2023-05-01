@@ -34,11 +34,11 @@
     #include <SD.h>
 #endif
 
-
-
 #if WITH_NTP
     #define DEFAULT_NTP_SERVER  "pool.ntp.org"
 #endif
+
+#define DEFAULT_DEVICE_SSDP  1
 
 
 // reminder
@@ -61,6 +61,7 @@ static valueIdType device_items[] = {
     ID_DEBUG_LEVEL,
     ID_LOG_LEVEL,
     ID_DEVICE_WIFI,
+    ID_DEVICE_SSDP,
     ID_DEVICE_IP,
 #if WITH_NTP
     ID_DEVICE_TZ,
@@ -128,6 +129,7 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_DEVICE_VERSION,VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_version,  },
     { ID_DEVICE_NAME,   VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_REQUIRED,   NULL,                       NULL,   "myIotDevice" },
     { ID_DEVICE_WIFI,   VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_wifi,     (void *) onChangeWifi, { .int_range = { DEFAULT_DEVICE_WIFI }} },
+    { ID_DEVICE_SSDP,   VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_ssdp,     NULL,                  { .int_range = { DEFAULT_DEVICE_SSDP }} },
     { ID_DEVICE_IP,     VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_ip,       },
 
 #if WITH_NTP
@@ -162,6 +164,7 @@ String myIOTDevice::_device_type = IOT_DEVICE;
 String myIOTDevice::_device_version = IOT_DEVICE_VERSION;
 
 bool myIOTDevice::_device_wifi = DEFAULT_DEVICE_WIFI;
+bool myIOTDevice::_device_ssdp = DEFAULT_DEVICE_SSDP;
 
 String myIOTDevice::_device_ip;
 
