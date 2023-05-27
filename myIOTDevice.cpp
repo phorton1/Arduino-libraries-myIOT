@@ -76,7 +76,9 @@ static valueIdType device_items[] = {
     ID_MQTT_USER,
     ID_MQTT_PASS,
 #endif
-
+#if WITH_AUTO_REBOOT
+    ID_AUTO_REBOOT,
+#endif
     ID_FACTORY_RESET,
     ID_LAST_BOOT,
     ID_UPTIME,
@@ -116,6 +118,10 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_VALUES,        VALUE_TYPE_COMMAND,    VALUE_STORE_PROG,      VALUE_STYLE_VERIFY,     NULL,                       (void *) showValues },
 #if WITH_WS
     { ID_JSON,          VALUE_TYPE_COMMAND,    VALUE_STORE_PROG,      VALUE_STYLE_VERIFY,     NULL,                       (void *) showJson },
+#endif
+#if WITH_AUTO_REBOOT
+    { ID_AUTO_REBOOT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_OFF_ZERO,  (void *) &_auto_reboot,        NULL, { .int_range = { 0, 0, 1000}}  },
+    #define ID_AUTO_REBOOT    "AUTO_REBOOT"
 #endif
 
     { ID_LAST_BOOT,     VALUE_TYPE_TIME,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_last_boot, },
@@ -177,6 +183,9 @@ time_t myIOTDevice::_device_last_boot;
 int    myIOTDevice::_device_uptime;
 bool   myIOTDevice::_device_booting;
 
+#if WITH_AUTO_REBOOT
+    int myIOTDevice::_auto_reboot;
+#endif
 
 #if WITH_SD
     bool   myIOTDevice::m_sd_started;
@@ -797,5 +806,25 @@ void myIOTDevice::loop()
 
     #ifndef SERIAL_TASK
         myIOTSerial::loop();        // has a task
+    #endif
+
+    #if WITH_AUTO_REBOOT
+        // check auto reboot every 30 seconds
+
+        uint32_t now = time(NULL);
+        static uint32_t last_boot_check = 0;
+
+        if (_auto_reboot &&
+            now - last_boot_check > 30)
+        {
+            uint32_t hours = now - _device_last_boot;
+            hours = hours / 3600;
+            if (hours >= _auto_reboot &&
+                okToAutoReboot())
+            {
+                LOGI("AUTO REBOOTING!");
+                reboot();
+            }
+        }
     #endif
 }

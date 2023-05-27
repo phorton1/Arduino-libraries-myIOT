@@ -30,8 +30,12 @@
 #define ID_DEVICE_SSDP    "SSDP"
 
 #if WITH_NTP
-#define ID_DEVICE_TZ      "DEVICE_TZ"
-#define ID_NTP_SERVER     "NTP_SERVER"
+    #define ID_DEVICE_TZ      "DEVICE_TZ"
+    #define ID_NTP_SERVER     "NTP_SERVER"
+#endif
+
+#if WITH_AUTO_REBOOT
+    #define ID_AUTO_REBOOT    "AUTO_REBOOT"
 #endif
 
 #define ID_DEVICE_BOOTING "DEVICE_BOOTING"
@@ -235,6 +239,10 @@ class myIOTDevice
             // called to temporarily turn wifi on or off without actually
             // changing the preference
 
+        #if WITH_AUTO_REBOOT
+            virtual bool okToAutoReboot()   { return 1; }
+        #endif
+
     private:
 
         // desciptors
@@ -262,6 +270,11 @@ class myIOTDevice
         static time_t _device_last_boot;
         static int    _device_uptime;
         static bool   _device_booting;
+
+        #if WITH_AUTO_REBOOT
+            static int _auto_reboot;
+        #endif
+
 
         // working vars
 

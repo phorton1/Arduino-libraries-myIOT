@@ -37,6 +37,10 @@
     #define WITH_SD     0
 #endif
 
+#ifndef WITH_AUTO_REBOOT
+    #define WITH_AUTO_REBOOT  0
+#endif
+
 #ifndef DEFAULT_DEVICE_WIFI
     #define DEFAULT_DEVICE_WIFI 1
 #endif
