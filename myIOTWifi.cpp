@@ -68,13 +68,26 @@
 
 #define DEBUG_WIFI      1
 
+#define AP_IP       "192.168.1.254"
+#define AP_MASK     "255.255.255.0"
+
 #define WIFI_CONNECT_TIMEOUT    15000
 #define WIFI_DISCONNECT_TIMEOUT 10000
 #define STOP_AP_TIME            10000
-#define AP_RECONNECT_TIME       10000
 
-#define AP_IP       "192.168.1.254"
-#define AP_MASK     "255.255.255.0"
+// reconnect will try 6 times every 15 seconds, 90 secs total
+// then 15 times every 6 minutes, upto 1.5 hours
+// and every 15 minutes thereafter
+
+#define STA_RECONNECT_TIME0       15
+
+#define STA_RECONNECT_TRIES1      6
+#define STA_RECONNECT_TIME1       360
+
+#define STA_RECONNECT_TRIES2      21
+#define STA_RECONNECT_TIME2       900
+
+
 
 myIOTWifi    my_iot_wifi;
 
@@ -84,7 +97,10 @@ uint32_t myIOTWifi::m_stop_ap;
 bool myIOTWifi::m_suppress_auto_sta;
 String myIOTWifi::m_ip_address;
 
+
+
 static uint32_t g_reconnect = 0;
+static int g_reconnect_tries = 0;
 
 
 
@@ -217,6 +233,7 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
         }
         else
         {
+            g_reconnect_tries = 0;
             m_connect_status |= IOT_CONNECT_STA;
             m_ip_address = WiFi.localIP().toString();
             LOGI("Connected to %s with IPAddress=%s",sta_ssid.c_str(),m_ip_address.c_str());
@@ -298,14 +315,23 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
 
 void myIOTWifi::loop()
 {
-    if (!m_suppress_auto_sta && g_reconnect && millis() > g_reconnect + AP_RECONNECT_TIME)
+    if (!m_suppress_auto_sta && g_reconnect)
     {
-        LOGI("autoReconnecting to station...");
-        m_stop_ap = 0;
-        g_reconnect = 0;
-        connect(
-            my_iot_device->getString(ID_STA_SSID),
-            my_iot_device->getString(ID_STA_PASS));
+        uint32_t use_millis =
+            g_reconnect_tries > STA_RECONNECT_TRIES2 ? STA_RECONNECT_TIME2 :
+            g_reconnect_tries > STA_RECONNECT_TRIES1 ? STA_RECONNECT_TIME1 :
+            STA_RECONNECT_TIME0;
+        use_millis *= 1000;
+
+        if (millis() - g_reconnect >= use_millis)
+        {
+           LOGI("autoReconnecting(%d) to station after %d ms ...",g_reconnect_tries,use_millis);
+           m_stop_ap = 0;
+           g_reconnect = 0;
+           connect(
+               my_iot_device->getString(ID_STA_SSID),
+               my_iot_device->getString(ID_STA_PASS));
+        }
     }
     else if (
         g_reconnect == 0 &&
@@ -313,10 +339,11 @@ void myIOTWifi::loop()
         my_iot_device->getString(ID_STA_SSID) != "" &&
         WiFi.status() != WL_CONNECTED)
     {
-        LOGI("Station connection lost.  Setting reconnect timer");
         m_stop_ap = 0;
         m_connect_status &= ~IOT_CONNECT_STA;
         g_reconnect = millis();
+        g_reconnect_tries++;
+        LOGI("Station connection lost.  Setting reconnect(%d) timer",g_reconnect_tries);
     }
 
 
@@ -330,7 +357,5 @@ void myIOTWifi::loop()
         WiFi.mode(WIFI_STA);    // required to turn off the AP
         my_iot_device->onConnectStation();
     }
-
-
 
 }

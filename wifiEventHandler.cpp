@@ -4,6 +4,8 @@
 #include <WiFi.h>
 #include "myIOTLog.h"
 
+static WiFiEvent_t last_event;
+
 
 static const char *wifiEventName(WiFiEvent_t event)
 {
@@ -47,7 +49,15 @@ static const char *wifiEventName(WiFiEvent_t event)
 
 static void onWiFiEvent(WiFiEvent_t event)
 {
-	LOGD("WIFI_EVENT(%d) %s",event,wifiEventName(event));
+	// only show new event types
+	// to prevent showing hundreds of STA_DISCONNECTED
+	// when WIFI goes down.
+
+	if (last_event != event)
+	{
+		LOGD("WIFI_EVENT(%d) %s",event,wifiEventName(event));
+		last_event = event;
+	}
 }
 
 

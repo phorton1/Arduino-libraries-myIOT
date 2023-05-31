@@ -521,7 +521,7 @@ void myIOTDevice::setup()
     setInt(ID_UPTIME,_device_last_boot);
 
     proc_leave();
-    LOGD("myIOTDevice::setup() completed");
+    LOGD("myIOTDevice::setup() completed LAST_BOOT=%s",getAsString(ID_LAST_BOOT).c_str());
 
 }   // myIOTDevice::setup();
 
@@ -822,7 +822,7 @@ void myIOTDevice::loop()
             if (hours >= _auto_reboot &&
                 okToAutoReboot())
             {
-                LOGI("AUTO REBOOTING!");
+                LOGI("AUTO REBOOTING! last(%d) now(%d) hours(%d) _auto_reboot(%d)",_device_last_boot,now,hours,_auto_reboot);
                 reboot();
             }
         }
