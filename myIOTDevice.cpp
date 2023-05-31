@@ -541,14 +541,6 @@ iotConnectStatus_t myIOTDevice::getConnectStatus()
     return my_iot_wifi.getConnectStatus();
 }
 
-
-
-
-void myIOTDevice::clearStopAP()
-{
-    my_iot_wifi.clearStopAP();
-}
-
 void myIOTDevice::onConnectStation()
 {
     _device_ip = myIOTWifi::getIpAddress();
@@ -810,6 +802,10 @@ void myIOTDevice::loop()
 
     #if WITH_AUTO_REBOOT
         // check auto reboot every 30 seconds
+        // There is some weird behavior here on the bilgeAlarm.
+        // Perhaps something to do with bilgeAlarm "since_last_run" ?? It jumped back 14 seconds!
+        // causing an AUTO_REBOOT, as if it sets LAST_BOOT time and THEN NTP adjusted the clock
+        // backwards a few seconds a few seconds later.
 
         uint32_t now = time(NULL);
         static uint32_t last_boot_check = 0;

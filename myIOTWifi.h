@@ -7,6 +7,10 @@
 #include "myIOTTypes.h"
 
 
+extern int ap_connection_count;
+    // in wifiEventHandler.cpp
+
+
 class myIOTWifi
 {
     public:
@@ -19,19 +23,14 @@ class myIOTWifi
         static void connect(const String &sta_ssid, const String &sta_pass);
             // synonymous with begin() at this time, this is the entry point
             // to start wifi in either station or AP mode.
-
         static void disconnect();
-
-        static void clearStopAP() { m_stop_ap = 0; }
-
-        static void suppressAutoConnectSTA();
 
     private:
 
         static iotConnectStatus_t m_connect_status;
-        static uint32_t m_stop_ap;
         static String m_ip_address;
-        static bool m_suppress_auto_sta;
+        static uint32_t m_stop_ap;
 };
+
 
 extern myIOTWifi my_iot_wifi;

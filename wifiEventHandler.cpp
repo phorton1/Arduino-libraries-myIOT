@@ -6,6 +6,8 @@
 
 static WiFiEvent_t last_event;
 
+int ap_connection_count = 0;
+
 
 static const char *wifiEventName(WiFiEvent_t event)
 {
@@ -57,6 +59,19 @@ static void onWiFiEvent(WiFiEvent_t event)
 	{
 		LOGD("WIFI_EVENT(%d) %s",event,wifiEventName(event));
 		last_event = event;
+	}
+
+	// keep track of AP_STA connections
+
+	if (event == SYSTEM_EVENT_AP_STACONNECTED)
+	{
+		ap_connection_count ++;
+		LOGI("ap_connection_count=%d",ap_connection_count);
+	}
+	else if (event == SYSTEM_EVENT_AP_STADISCONNECTED)
+	{
+		ap_connection_count --;
+		LOGI("ap_connection_count=%d",ap_connection_count);
 	}
 }
 

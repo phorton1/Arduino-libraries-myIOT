@@ -1,57 +1,6 @@
 //--------------------------
 // myIOTWifi.cpp
 //--------------------------
-// There is an issue that if the STA_SSID is set, but the Wifi network is not available,
-// so you try to use the AP mode to reconnect, that in the middle of that it will try
-// reconnecting to the STA, thus breaking the AP connection (channel number difference?).
-// THE WHOLE DEVICE APPEARS TO CRASH.
-//
-// This is different than setting the STA_SSID to blank, which then allows plenty of
-// time to connect to the AP and during which the device appears to run ok.
-//
-// The conflict also presents itself as a re-entrancy to connect(), which leads
-// to weird debugging output.
-//
-// I am thinking the proper solution is to give better (complete) control to the user
-// over the AP mode, including allowing the device to be used as an access point.
-//
-// This is a fairly major change to the way I've done the Captive Portal since the
-// very beginning and leads to an architectural review of the entire networking
-// capabililty of the device, including possibly revisiting MQTT (with an ESP32
-// providing the LAN and server) or things like ESP_NOW (for a completely local
-// system based entirely on ESP32's)
-//
-// At a minimum we are going to implement the notion that if we are in (fallback to)
-// AP mode, and anybody "hits" the captive portal page, that we will stop trying to
-// connect to the previous STATION at least until a reboot.  This at least has the
-// effect that if the auto-reconnect kills the AP during a first connection to it,
-// due to the fact that auto-reconnect happens fapidly, that subsequent to the first
-// AP connection, a second AP connection will remain persistent and usable.
-//
-// This barely gets us through.   We can now usually connect to the AP at least
-// by the second try and get the device back onto the LAN, but then the rPi server
-// (who is also trying over and over to reconnect to it) finds it BEFORE the AP mode
-// has been turned off, resulting (currently) in IT getting "illegal commands" for
-// things like the spiffs list, and values, which it then basically never retries,
-// so to it, the bilgeAlarm looks like it's stuck "rebooting", until I reboot the
-// rpi server ... sheesh.
-//
-// Once again, a cleanup of this whole mess is in order and I think it revolves
-// over having more explicit control of the AP/STA modes (via the device screen
-// UI if present) and/or being able to "use" the device while in AP mode (so
-// as to set/allow "station" mode).
-//
-// It is almost as if it should come in AP mode fully ready to go (with the possible
-// exception of forcing the user to change the AP password) and THEN have a UI to
-// allow them to connect to a station (CONNECT STA button) which, in turn, also sets
-// the mode to STA_AP or something.
-//
-// It more or less CANNOT be allowed to fail commands when connected via station
-// mode or else I have to change the rPi architecture/timing too ....
-//
-// Maybe widen the time window for wifi-retries to allow a reasonable amount of time
-// to get to AP mode?   There is always still the problem that you could hit it when
-// it just startin
 
 #include "myIOTWifi.h"
 #include "myIOTDevice.h"
@@ -64,6 +13,13 @@
 // The idea is that in AP Mode they will ONLY be able to log on to a local wifi network,
 // and generally be unable to do anything else.  In STA mode everyting is open HTTP,
 // Websockets, OTA, etc.
+//
+// We keep track of the AP connection in WifiEventHandler.cpp
+// If we cannot connect as a STA, we start an AP.
+// If someone connects to that AP, we suppress auto-reconnect (and any stopping of the AP).
+// Once STA is connected, and they disconnect from the AP, it should go into STA only mode
+//
+
 
 
 #define DEBUG_WIFI      1
@@ -75,11 +31,11 @@
 #define WIFI_DISCONNECT_TIMEOUT 10000
 #define STOP_AP_TIME            10000
 
-// reconnect will try 6 times every 15 seconds, 90 secs total
+// reconnect will try 6 times every 30 seconds, 180 secs total
 // then 15 times every 6 minutes, upto 1.5 hours
 // and every 15 minutes thereafter
 
-#define STA_RECONNECT_TIME0       15
+#define STA_RECONNECT_TIME0       30
 
 #define STA_RECONNECT_TRIES1      6
 #define STA_RECONNECT_TIME1       360
@@ -88,28 +44,16 @@
 #define STA_RECONNECT_TIME2       900
 
 
-
 myIOTWifi    my_iot_wifi;
 
 iotConnectStatus_t myIOTWifi::m_connect_status = IOT_CONNECT_NONE;
-
-uint32_t myIOTWifi::m_stop_ap;
-bool myIOTWifi::m_suppress_auto_sta;
 String myIOTWifi::m_ip_address;
 
-
+uint32_t myIOTWifi::m_stop_ap;
 
 static uint32_t g_reconnect = 0;
 static int g_reconnect_tries = 0;
 
-
-
-
-void myIOTWifi::suppressAutoConnectSTA()
-{
-    LOGI("SUPPRESSING STA AUTO RECONNECT IN AP MODE");
-    m_suppress_auto_sta = true;
-}
 
 
 
@@ -251,10 +195,10 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
     }
 
     // CREATE ACCESS POINT
-    // if there's no station and the AP has not been created
+    // if there's no station (invariantly regardless if the AP has previouisly been created)
 
-    if (!(m_connect_status & IOT_CONNECT_STA) &&
-        !(m_connect_status & IOT_CONNECT_AP))
+    if (!(m_connect_status & IOT_CONNECT_STA))
+    //  && !(m_connect_status & IOT_CONNECT_AP))
     {
         WiFi.mode(WIFI_AP_STA);     // default mode == both on
         delay(400);
@@ -315,7 +259,7 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
 
 void myIOTWifi::loop()
 {
-    if (!m_suppress_auto_sta && g_reconnect)
+    if (!ap_connection_count && g_reconnect)
     {
         uint32_t use_millis =
             g_reconnect_tries > STA_RECONNECT_TRIES2 ? STA_RECONNECT_TIME2 :
@@ -334,6 +278,7 @@ void myIOTWifi::loop()
         }
     }
     else if (
+        !ap_connection_count &&
         g_reconnect == 0 &&
         my_iot_device->getBool(ID_DEVICE_WIFI) &&
         my_iot_device->getString(ID_STA_SSID) != "" &&
@@ -347,7 +292,7 @@ void myIOTWifi::loop()
     }
 
 
-    if (m_stop_ap && millis() > m_stop_ap + STOP_AP_TIME)
+    if (!ap_connection_count && m_stop_ap && millis() > m_stop_ap + STOP_AP_TIME)
     {
         m_stop_ap = 0;
         LOGI("Stopping Access Point");

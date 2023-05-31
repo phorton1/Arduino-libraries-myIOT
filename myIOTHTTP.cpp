@@ -34,12 +34,15 @@ static const char PAGE_404[] =
     "id='prg'></PROGRESS>\n\n<script>\nvar i = 0; \nvar x = document.getElementById(\"prg\"); \nx.max=5; \nvar "
     "interval=setInterval(function(){\ni=i+1; \nvar x = document.getElementById(\"prg\"); \nx.value=i; \nif (i>5) "
     "\n{\nclearInterval(interval);\nwindow.location.href='http://$STA_ADDRESS$/';\n}\n},1000);\n</script>\n</CENTER>\n</BODY>\n</HTML>\n\n";
-static const char PAGE_CAPTIVE[] =
-    "<HTML>\n<HEAD>\n<title>Captive Portal $COUNT$</title> \n</HEAD>\n<BODY>\n<CENTER>Captive Portal page : $QUERY$<BR>\nYou will be "
-    "redirected...\n<BR><BR>\nif not redirected, <a href='http://$AP_ADDRESS$/captive'>click here</a>\n<BR><BR>\n<PROGRESS name='prg' "
-    "id='prg'></PROGRESS>\n\n<script>\nvar i = 0; \nvar x = document.getElementById(\"prg\"); \nx.max=5; \nvar "
-    "interval=setInterval(function(){\ni=i+1; \nvar x = document.getElementById(\"prg\"); \nx.value=i; \nif (i>2) "
-    "\n{\nclearInterval(interval);\nwindow.location.href='http://$AP_ADDRESS$/captive';\n}\n},1000);\n</script>\n</CENTER>\n</BODY>\n</HTML>\n\n";
+
+#if 0   // using 302 redirect instead
+    static const char PAGE_CAPTIVE[] =
+        "<HTML>\n<HEAD>\n<title>Captive Portal $COUNT$</title> \n</HEAD>\n<BODY>\n<CENTER>Captive Portal page : $QUERY$<BR>\nYou will be "
+        "redirected...\n<BR><BR>\nif not redirected, <a href='http://$AP_ADDRESS$/captive'>click here</a>\n<BR><BR>\n<PROGRESS name='prg' "
+        "id='prg'></PROGRESS>\n\n<script>\nvar i = 0; \nvar x = document.getElementById(\"prg\"); \nx.max=5; \nvar "
+        "interval=setInterval(function(){\ni=i+1; \nvar x = document.getElementById(\"prg\"); \nx.value=i; \nif (i>2) "
+        "\n{\nclearInterval(interval);\nwindow.location.href='http://$AP_ADDRESS$/captive';\n}\n},1000);\n</script>\n</CENTER>\n</BODY>\n</HTML>\n\n";
+#endif
 
 
 WebServer web_server(MY_HTTP_PORT);
@@ -407,7 +410,7 @@ void myIOTHTTP::handle_captive()
 {
     if (SPIFFS.exists(CAPTIVE_PORTAL_HTML))
     {
-        my_iot_device->clearStopAP();
+        // my_iot_device->clearStopAP();
             // we want to stop wifi from turning off the AP once
             // we have started a session, even if it *might* prefer
             // to stop the AP and (re)connect to a station otherwise.
@@ -423,7 +426,11 @@ void myIOTHTTP::handle_captive()
     }
     else    // should not get here
     {
-        web_server.send(200, "text/html", doReplacements(PAGE_CAPTIVE));
+        #if 1
+            LOGE("ERROR CAPTIVE PORTAL HTML FILE %s DOES NOT EXIST!!",CAPTIVE_PORTAL_HTML);
+        #else
+            web_server.send(200, "text/html", doReplacements(PAGE_CAPTIVE));
+        #endif
     }
 }
 
@@ -443,20 +450,34 @@ void myIOTHTTP::handle_request()
 
     debugRequest("handle_request");
 
-    // in AP Mode (Captive Portal) all html requests (except /captive)
-    // return the redirect page, and if it is hit once, we inhibit auto
-    // reconnect to the station ...
+    // If someobne is connected in AP Mode (Captive Portal)
+    // all html requests (except /captive) return a 302 redirect
 
-    if (my_iot_device->getConnectStatus() & IOT_CONNECT_AP)
+    if (ap_connection_count)
     {
-        myIOTWifi::suppressAutoConnectSTA();
-            // this is very similar to clearStopAP() in that
-            // it prevents WIFI from disconnecting the AP and
-            // starting the station automatically.
-
-        web_server.send(200, "text/html", doReplacements(PAGE_CAPTIVE));
+        #if 1   // redirect using 302
+            //how to do a redirect, next two lines
+            LOGI("Sending 302 redirect to /captive");
+            web_server.sendHeader("Location", String("/captive"), true);
+            web_server.send ( 302, "text/plain", "");
+        #else
+            LOGI("Sending PAGE_CAPTIVE redirect page");
+            web_server.send(200, "text/html", doReplacements(PAGE_CAPTIVE));
+        #endif
+        return;
     }
 
+    // otherwise, if AP is active, return 404 not found
+
+    else if  (my_iot_device->getConnectStatus() & IOT_CONNECT_AP)
+    {
+        LOGI("AP_MODE returning page not found: %s",path.c_str());
+        web_server.send(404, "text/html", doReplacements(PAGE_404));
+    }
+
+    //----------------------------------------------------
+    // normal behavior from here down
+    //----------------------------------------------------
     // custom links
     // could be expanded to have a mime_type and use a buffer of some sort
 
@@ -495,7 +516,7 @@ void myIOTHTTP::handle_request()
     }
 
     // The normal IOTDevice WebUI can only be accessed
-    // in WS_STATION mode, and includes not found error
+    // in STATION mode, and includes not found error
 
     else if (SPIFFS.exists(path))
     {

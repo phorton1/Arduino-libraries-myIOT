@@ -165,7 +165,6 @@ class myIOTDevice
         void onConnectStation();
         void onDisconnectAP();
         void onConnectAP();
-        void clearStopAP();
             // methods called by WiFi so that this object can coordinate
             // and stop/restart other object based on wifiState, passed
             // through to myIOTHTTP
