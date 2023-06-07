@@ -24,7 +24,12 @@
 #define MY_HTTP_PORT    80
 #define MY_DNS_PORT     53
 
-
+// #define USE_302_REDIRECT
+// If this is defined, instead of sending the PAGE_CAPTIVE html,
+// we will use 302 redirects.  However, the 302 approach did not seem to
+// work as well (iPad) as the html approach.  Neither appears to work
+// on Android 12 (my new Galaxy S21), so in those cases the user must
+// explicitly hit a page (i.e. 192.168.1.254/captive)
 
 #define CAPTIVE_PORTAL_HTML  "/captive.html"
 
@@ -34,8 +39,7 @@ static const char PAGE_404[] =
     "id='prg'></PROGRESS>\n\n<script>\nvar i = 0; \nvar x = document.getElementById(\"prg\"); \nx.max=5; \nvar "
     "interval=setInterval(function(){\ni=i+1; \nvar x = document.getElementById(\"prg\"); \nx.value=i; \nif (i>5) "
     "\n{\nclearInterval(interval);\nwindow.location.href='http://$STA_ADDRESS$/';\n}\n},1000);\n</script>\n</CENTER>\n</BODY>\n</HTML>\n\n";
-
-#if 0   // using 302 redirect instead
+#ifndef USE_302_REDIRECT
     static const char PAGE_CAPTIVE[] =
         "<HTML>\n<HEAD>\n<title>Captive Portal $COUNT$</title> \n</HEAD>\n<BODY>\n<CENTER>Captive Portal page : $QUERY$<BR>\nYou will be "
         "redirected...\n<BR><BR>\nif not redirected, <a href='http://$AP_ADDRESS$/captive'>click here</a>\n<BR><BR>\n<PROGRESS name='prg' "
@@ -43,7 +47,6 @@ static const char PAGE_404[] =
         "interval=setInterval(function(){\ni=i+1; \nvar x = document.getElementById(\"prg\"); \nx.value=i; \nif (i>2) "
         "\n{\nclearInterval(interval);\nwindow.location.href='http://$AP_ADDRESS$/captive';\n}\n},1000);\n</script>\n</CENTER>\n</BODY>\n</HTML>\n\n";
 #endif
-
 
 WebServer web_server(MY_HTTP_PORT);
 DNSServer dns_server;
@@ -426,11 +429,7 @@ void myIOTHTTP::handle_captive()
     }
     else    // should not get here
     {
-        #if 1
-            LOGE("ERROR CAPTIVE PORTAL HTML FILE %s DOES NOT EXIST!!",CAPTIVE_PORTAL_HTML);
-        #else
-            web_server.send(200, "text/html", doReplacements(PAGE_CAPTIVE));
-        #endif
+        LOGE("ERROR CAPTIVE PORTAL HTML FILE %s DOES NOT EXIST!!",CAPTIVE_PORTAL_HTML);
     }
 }
 
@@ -455,7 +454,7 @@ void myIOTHTTP::handle_request()
 
     if (ap_connection_count)
     {
-        #if 1   // redirect using 302
+        #ifdef USE_302_REDIRECT   // redirect using 302
             //how to do a redirect, next two lines
             LOGI("Sending 302 redirect to /captive");
             web_server.sendHeader("Location", String("/captive"), true);

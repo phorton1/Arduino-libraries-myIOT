@@ -337,6 +337,8 @@
                 {
                     if (obj.join_network == "OK")
                     {
+                        if (obj.connect_ip)
+                            setHTMLById('connect_ip',obj.connect_ip);
                         showState(4);
                     }
                     else

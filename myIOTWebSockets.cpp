@@ -15,7 +15,7 @@
 
 #include "myIOTDevice.h"
 #include "myIOTLog.h"
-
+#include "myIOTWifi.h"
 #include <ArduinoJson.h>
 #include <SPIFFS.h>
 #include <SD.h>
@@ -392,8 +392,13 @@ void myIOTWebSockets::webSocketEvent(uint8_t num, WStype_t ws_type, uint8_t *dat
                         {
                             my_iot_device->setString(ID_STA_SSID,ssid);
                             my_iot_device->setString(ID_STA_PASS,pass);
-                            sendTXT(num,"{\"join_network\":\"OK\"}");
-                            LOGD("Sent OK reply");
+                            String ip = my_iot_wifi.getIpAddress();
+                            String msg = "{\"join_network\":\"OK\",\"connect_ip\":\"";
+                            msg += ip;
+                            msg += "\"}";
+
+                            sendTXT(num,msg.c_str());
+                            LOGD("Sent OK reply: %s",msg.c_str());
                         }
                         else
                         {
