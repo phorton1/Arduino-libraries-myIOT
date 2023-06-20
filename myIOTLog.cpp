@@ -157,12 +157,13 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 	// add the final formatted string
 
 	len = strlen(display_buf);
-	int avail = MAX_BUFFER - len - 1 - 5 - 1;
-		// 1 for \n,  5 for trailing color string, 1 for 0 terminator
+	int avail = MAX_BUFFER - len - 2 - 5 - 1;
+		// 2 for \r\n,  5 for trailing color string, 1 for 0 terminator
 	vsnprintf(end,avail,format,*var);
 	len = strlen(display_buf);
 	end = &display_buf[len];
-	strcpy(end,"\n");
+	strcpy(end,"\r\n");
+	end++;
 	end++;
 
 	if (iot_debug_level >= level)
