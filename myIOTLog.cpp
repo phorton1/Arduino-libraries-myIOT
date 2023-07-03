@@ -8,10 +8,6 @@
 
 // Logging Compile Time Preferences
 
-#ifndef LOG_ANSI_COLORS
-    #define LOG_ANSI_COLORS     1
-#endif
-
 #ifndef LOG_TIMESTAMP
     #define LOG_TIMESTAMP       1
 #endif
@@ -36,15 +32,14 @@
     #include <ESPTelnet.h>
 #endif
 
-#if LOG_ANSI_COLORS
-	#define MSG_COLOR_WHITE         "\033[97m"       // bright white
-	#define MSG_COLOR_GREEN         "\033[92m"       // bright green
-	#define MSG_COLOR_YELLOW        "\033[93m"       // yellow
-	#define MSG_COLOR_RED           "\033[91m"       // red
-	#define MSG_COLOR_CYAN          "\033[96m"       // bright cyan
-	#define MSG_COLOR_MAGENTA       "\033[95m"       // magenta
-	#define MSG_COLOR_LIGHT_GREY    "\033[37m"       // light_grey
-#endif
+#define MSG_COLOR_WHITE         "\033[97m"       // bright white
+#define MSG_COLOR_GREEN         "\033[92m"       // bright green
+#define MSG_COLOR_YELLOW        "\033[93m"       // yellow
+#define MSG_COLOR_RED           "\033[91m"       // red
+#define MSG_COLOR_CYAN          "\033[96m"       // bright cyan
+#define MSG_COLOR_MAGENTA       "\033[95m"       // magenta
+#define MSG_COLOR_LIGHT_GREY    "\033[37m"       // light_grey
+
 
 uint32_t iot_log_level = LOG_LEVEL_INFO;
 uint32_t iot_debug_level = LOG_LEVEL_DEBUG;
@@ -95,7 +90,9 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 	char *log_buf = display_buf;		// after color sequence
     char *end = display_buf;			// next position to write at
 
-	#if LOG_ANSI_COLORS
+	bool log_ansi = my_iot_device->logAnsiColors();
+	if (log_ansi)
+	{
 		const char *color = MSG_COLOR_LIGHT_GREY;    // default == LOG_LEVEL_USER
 		switch (level)
 		{
@@ -106,7 +103,7 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 			case LOG_LEVEL_VERBOSE : color = MSG_COLOR_MAGENTA; break;
 		}
 		mycat(display_buf,color,&log_buf);
-	#endif
+	}
 
 	#if LOG_TIMESTAMP
 		struct timeval tv_now;
@@ -168,9 +165,8 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 
 	if (iot_debug_level >= level)
 	{
-		#if LOG_ANSI_COLORS
+		if (log_ansi)
 			strcpy(end,MSG_COLOR_LIGHT_GREY);
-		#endif
 		Serial.print(display_buf);
 		#if WITH_TELNET
 			if (myIOTSerial::telnetConnected())
@@ -199,9 +195,8 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 			}
 			else
 			{
-				#if LOG_ANSI_COLORS
+				if (log_ansi)
 					*end = 0;	// remove the terminating color string
-				#endif
 				file.print(log_buf);
 				file.close();
 			}

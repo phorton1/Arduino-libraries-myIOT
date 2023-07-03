@@ -145,6 +145,7 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
 
     { ID_DEBUG_LEVEL,   VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &iot_debug_level,  NULL,   { .enum_range = { LOG_LEVEL_DEBUG, logAllowed }} },
     { ID_LOG_LEVEL,     VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &iot_log_level,    NULL,   { .enum_range = { LOG_LEVEL_NONE, logAllowed }} },
+    { ID_ANSI_COLORS,   VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_ansi_colors,     NULL },
     { ID_AP_PASS,       VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   DEFAULT_AP_PASSWORD },
     { ID_STA_SSID,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,   "" },
     { ID_STA_PASS,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   "" },
@@ -169,6 +170,7 @@ String myIOTDevice::_device_uuid;
 String myIOTDevice::_device_type = IOT_DEVICE;
 String myIOTDevice::_device_version = IOT_DEVICE_VERSION;
 
+bool myIOTDevice::_ansi_colors = 0;
 bool myIOTDevice::_device_wifi = DEFAULT_DEVICE_WIFI;
 bool myIOTDevice::_device_ssdp = DEFAULT_DEVICE_SSDP;
 

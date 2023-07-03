@@ -44,6 +44,7 @@
     // only kept in memory
 #define ID_DEBUG_LEVEL    "DEBUG_LEVEL"
 #define ID_LOG_LEVEL      "LOG_LEVEL"
+#define ID_ANSI_COLORS    "ANSI_COLORS"
 #define ID_AP_PASS        "AP_PASS"
 #define ID_STA_SSID       "STA_SSID"
 #define ID_STA_PASS       "STA_PASS"
@@ -191,6 +192,7 @@ class myIOTDevice
 
         String handleCommand(const String &command, valueStore from = VALUE_STORE_PROG);
             // called from myIOTSerial.cpp
+        bool logAnsiColors()    { return _ansi_colors; }
 
         // miscellaneous called internally, virtualized methods for derived class
 
@@ -244,7 +246,7 @@ class myIOTDevice
 
     private:
 
-        // desciptors
+        // descriptors
 
         static const valDescriptor m_base_descriptors[];
         static valueIdType *m_dash_items;
@@ -269,6 +271,7 @@ class myIOTDevice
         static time_t _device_last_boot;
         static int    _device_uptime;
         static bool   _device_booting;
+        static bool   _ansi_colors;
 
         #if WITH_AUTO_REBOOT
             static int _auto_reboot;
