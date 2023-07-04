@@ -228,15 +228,24 @@ What actually shows in the serial output, and logfiles, is determined by
 the settings for LOG_LEVEL and DEBUG_LEVEL, which can be modified via
 the Serial or WebUIs.
 
-*note1: there is a define, LOG_ANSI_COLORS=0, in **myIOTLog.cpp**
-that if turned on, will cause the serial output to output standard
-**ansi** color strings for each line of output, and different
-colors (i.e. red for errors, yellow for warnings, white for
-user level and green for debugging) will be shown in Putty
+**Note** that there are boolean paremeter that allow you to see more
+information in the serial output;
+
+- **LOG_COLORS** (default=0) - if turned on, will cause the serial output to
+send standard **ansi** color strings for each line of output, and different
+colors will be shown (i.e. red for errors, yellow for warnings, white for
+user level and green for debugging) in Putty
 or other ansi compatible serial monitors*
+- **LOG_DATE** (default=0) - will log the **date** to the output
+- **LOG_TIME** (default=1) - will log the **time** to the output
+- **LOG_MEM**  (default=0) - will log the current and lowest free **memory** to the output
+
 
 *note2: the Arduino serial monitor does not support ansi colors*
 
+*note3: the **default time zone** for the myIOT project is **EST**.  myIOT currently supports
+a few timezones (mostly in the USA). If you need other timeszones you will need
+to modify the source code to provide them.*
 
 Please see **myIOTLog.h** and **cpp** for more details.
 

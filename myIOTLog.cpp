@@ -6,20 +6,9 @@
 #include "myIOTDevice.h" // for WITH_TELNET type and hasSD() method
 #include <stdio.h>
 
-// Logging Compile Time Preferences
-
-#ifndef LOG_TIMESTAMP
-    #define LOG_TIMESTAMP       1
-#endif
-
 #ifndef LOG_TIMESTAMP_MS
     #define LOG_TIMESTAMP_MS    1
 #endif
-
-#ifndef LOG_MEM_LEVELS
-    #define LOG_MEM_LEVELS      1
-#endif
-
 
 
 #if WITH_SD
@@ -83,6 +72,13 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 		(!myIOTDevice::hasSD() || iot_log_level < level))
 		return;
 
+	bool log_colors = 0;
+	bool log_date = 0;
+	bool log_time = 0;
+	bool log_mem = 0;
+
+	my_iot_device->getLogBooleans(&log_colors, &log_date, &log_time, &log_mem);
+
 	#define MAX_BUFFER  255
 
 	int len = 0;
@@ -90,8 +86,8 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 	char *log_buf = display_buf;		// after color sequence
     char *end = display_buf;			// next position to write at
 
-	bool log_ansi = my_iot_device->logAnsiColors();
-	if (log_ansi)
+
+	if (log_colors)
 	{
 		const char *color = MSG_COLOR_LIGHT_GREY;    // default == LOG_LEVEL_USER
 		switch (level)
@@ -105,23 +101,33 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 		mycat(display_buf,color,&log_buf);
 	}
 
-	#if LOG_TIMESTAMP
+	if (log_date || log_time)
+	{
 		struct timeval tv_now;
 		gettimeofday(&tv_now, NULL);
 		String tm = timeToString(tv_now.tv_sec);	// time(NULL));
 
 		#if LOG_TIMESTAMP_MS
-			static char ibuf[12];
-			int ms = tv_now.tv_usec / 1000L;
-			sprintf(ibuf,".%03d",ms);
-			tm += ibuf;
+			if (log_time)
+			{
+				static char ibuf[12];
+				int ms = tv_now.tv_usec / 1000L;
+				sprintf(ibuf,".%03d",ms);
+				tm += ibuf;
+			}
 		#endif
 
 		tm += " ";
-		mycat(log_buf,tm.c_str(),&end);
-	#endif
 
-	#if LOG_MEM_LEVELS
+		if (!log_date)
+			tm = tm.substring(12);
+		else if (!log_time)
+			tm = tm.substring(0,12);
+		mycat(log_buf,tm.c_str(),&end);
+	}
+
+	if (log_mem)
+	{
 		uint32_t mem_free = xPortGetFreeHeapSize() / 1024;
 		uint32_t mem_min = xPortGetMinimumEverFreeHeapSize() / 1024;
 		len = mycat(end,String(mem_free).c_str(),&end);
@@ -132,7 +138,7 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 			strcpy(end++," ");
 			len++;
 		}
-	#endif
+	}
 
 	// Serial.println(display_buf);
 	// return;
@@ -165,7 +171,7 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 
 	if (iot_debug_level >= level)
 	{
-		if (log_ansi)
+		if (log_colors)
 			strcpy(end,MSG_COLOR_LIGHT_GREY);
 		Serial.print(display_buf);
 		#if WITH_TELNET
@@ -195,7 +201,7 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 			}
 			else
 			{
-				if (log_ansi)
+				if (log_colors)
 					*end = 0;	// remove the terminating color string
 				file.print(log_buf);
 				file.close();

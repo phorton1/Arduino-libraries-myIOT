@@ -40,6 +40,21 @@
 
 #define DEFAULT_DEVICE_SSDP  1
 
+// compile options for logging
+
+#ifndef DEFAULT_LOG_COLORS
+    #define DEFAULT_LOG_COLORS  0
+#endif
+#ifndef DEFAULT_LOG_DATE
+    #define DEFAULT_LOG_DATE  1
+#endif
+#ifndef DEFAULT_LOG_TIME
+    #define DEFAULT_LOG_TIME  1
+#endif
+#ifndef DEFAULT_LOG_MEM
+    #define DEFAULT_LOG_MEM  0
+#endif
+
 
 // reminder
 // PIN_SDCARD_CS = 5
@@ -76,6 +91,11 @@ static valueIdType device_items[] = {
     ID_MQTT_USER,
     ID_MQTT_PASS,
 #endif
+    ID_LOG_COLORS,
+    ID_LOG_DATE,
+    ID_LOG_TIME,
+    ID_LOG_MEM,
+
 #if WITH_AUTO_REBOOT
     ID_AUTO_REBOOT,
 #endif
@@ -120,7 +140,7 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_JSON,          VALUE_TYPE_COMMAND,    VALUE_STORE_PROG,      VALUE_STYLE_VERIFY,     NULL,                       (void *) showJson },
 #endif
 #if WITH_AUTO_REBOOT
-    { ID_AUTO_REBOOT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_OFF_ZERO,  (void *) &_auto_reboot,        NULL, { .int_range = { 0, 0, 1000}}  },
+    { ID_AUTO_REBOOT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_OFF_ZERO,  (void *) &_auto_reboot,      NULL, { .int_range = { 0, 0, 1000}}  },
     #define ID_AUTO_REBOOT    "AUTO_REBOOT"
 #endif
 
@@ -145,7 +165,12 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
 
     { ID_DEBUG_LEVEL,   VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &iot_debug_level,  NULL,   { .enum_range = { LOG_LEVEL_DEBUG, logAllowed }} },
     { ID_LOG_LEVEL,     VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &iot_log_level,    NULL,   { .enum_range = { LOG_LEVEL_NONE, logAllowed }} },
-    { ID_ANSI_COLORS,   VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_ansi_colors,     NULL },
+    { ID_LOG_COLORS,    VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_log_colors,      NULL,   { .int_range = { DEFAULT_LOG_COLORS }} },
+    { ID_LOG_DATE,      VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_log_date,        NULL,   { .int_range = { DEFAULT_LOG_DATE }} },
+    { ID_LOG_TIME,      VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_log_time,        NULL,   { .int_range = { DEFAULT_LOG_TIME }} },
+    { ID_LOG_MEM,       VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_log_mem,         NULL,   { .int_range = { DEFAULT_LOG_MEM }} },
+
+
     { ID_AP_PASS,       VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   DEFAULT_AP_PASSWORD },
     { ID_STA_SSID,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,   "" },
     { ID_STA_PASS,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   "" },
@@ -169,8 +194,6 @@ RTC_NOINIT_ATTR int myIOTDevice::m_boot_count;
 String myIOTDevice::_device_uuid;
 String myIOTDevice::_device_type = IOT_DEVICE;
 String myIOTDevice::_device_version = IOT_DEVICE_VERSION;
-
-bool myIOTDevice::_ansi_colors = 0;
 bool myIOTDevice::_device_wifi = DEFAULT_DEVICE_WIFI;
 bool myIOTDevice::_device_ssdp = DEFAULT_DEVICE_SSDP;
 
@@ -192,6 +215,12 @@ bool   myIOTDevice::_device_booting;
 #if WITH_SD
     bool   myIOTDevice::m_sd_started;
 #endif
+
+bool myIOTDevice::_log_colors = DEFAULT_LOG_COLORS;
+bool myIOTDevice::_log_date = DEFAULT_LOG_DATE;
+bool myIOTDevice::_log_time = DEFAULT_LOG_TIME;
+bool myIOTDevice::_log_mem = DEFAULT_LOG_MEM;
+
 
 valueIdType *myIOTDevice::m_dash_items = NULL;
 valueIdType *myIOTDevice::m_config_items = NULL;

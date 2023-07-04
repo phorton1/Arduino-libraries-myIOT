@@ -44,7 +44,11 @@
     // only kept in memory
 #define ID_DEBUG_LEVEL    "DEBUG_LEVEL"
 #define ID_LOG_LEVEL      "LOG_LEVEL"
-#define ID_ANSI_COLORS    "ANSI_COLORS"
+#define ID_LOG_COLORS     "LOG_COLORS"
+#define ID_LOG_DATE       "LOG_DATE"
+#define ID_LOG_TIME       "LOG_TIME"
+#define ID_LOG_MEM        "LOG_MEM"
+
 #define ID_AP_PASS        "AP_PASS"
 #define ID_STA_SSID       "STA_SSID"
 #define ID_STA_PASS       "STA_PASS"
@@ -192,7 +196,14 @@ class myIOTDevice
 
         String handleCommand(const String &command, valueStore from = VALUE_STORE_PROG);
             // called from myIOTSerial.cpp
-        bool logAnsiColors()    { return _ansi_colors; }
+
+        void getLogBooleans(bool *colors, bool *dte, bool *tm, bool *mem)
+        {
+            *colors = _log_colors;
+            *dte = _log_date;
+            *tm = _log_time;
+            *mem = _log_mem;
+        }
 
         // miscellaneous called internally, virtualized methods for derived class
 
@@ -271,7 +282,10 @@ class myIOTDevice
         static time_t _device_last_boot;
         static int    _device_uptime;
         static bool   _device_booting;
-        static bool   _ansi_colors;
+        static bool   _log_colors;
+        static bool   _log_date;
+        static bool   _log_time;
+        static bool   _log_mem;
 
         #if WITH_AUTO_REBOOT
             static int _auto_reboot;
