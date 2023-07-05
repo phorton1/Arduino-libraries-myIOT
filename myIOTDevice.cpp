@@ -708,7 +708,7 @@ void myIOTDevice::showValues()
 const char *findToolTip(const char *id)
 {
     const char **ptr = device_tooltips;
-    while (*ptr)
+    while (ptr && *ptr)
     {
         const char *left = *ptr++;
         const char *right = *ptr++;
@@ -716,7 +716,7 @@ const char *findToolTip(const char *id)
             return right;
     }
     ptr = g_derived_tooltips;
-    while (*ptr)
+    while (ptr && *ptr)
     {
         const char *left = *ptr++;
         const char *right = *ptr++;
@@ -933,7 +933,7 @@ void myIOTDevice::showAllParameters()
         const char **ptr = device_tooltips;
 
         bool started = false;
-        while (*ptr)
+        while (ptr && *ptr)
         {
             const char *left = *ptr++;
             const char *right = *ptr++;
@@ -947,7 +947,7 @@ void myIOTDevice::showAllParameters()
             started = true;
         }
         ptr = g_derived_tooltips;
-        while (*ptr)
+        while (ptr && *ptr)
         {
             const char *left = *ptr++;
             const char *right = *ptr++;
