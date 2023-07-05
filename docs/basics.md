@@ -108,7 +108,7 @@ subscribed from an MQTT broker.
 #define VALUE_STORE_NVS       0x01      // stored/retrieved from NVS (EEPROM)
 #define VALUE_STORE_WS        0x02      // broadcast to / received from WebSockets
 #define VALUE_STORE_MQTT_PUB  0x04      // published to (the) MQTT broker
-#define VALUE_STORE_MQTT_SUB  0x08      // subscribed to from (the) MQTT broker
+#define VALUE_STORE_SUB  0x08      // subscribed to from (the) MQTT broker
 #define VALUE_STORE_SERIAL    0x10      // recieved from serial port
 ```
 
@@ -123,7 +123,7 @@ common combinations:
 
 ```
 #define VALUE_STORE_PREF      (VALUE_STORE_NVS | VALUE_STORE_WS)
-#define VALUE_STORE_TOPIC     (VALUE_STORE_MQTT_PUB | VALUE_STORE_MQTT_SUB | VALUE_STORE_WS)
+#define VALUE_STORE_TOPIC     (VALUE_STORE_MQTT_PUB | VALUE_STORE_SUB | VALUE_STORE_WS)
 #define VALUE_STORE_PUB       (VALUE_STORE_MQTT_PUB | VALUE_STORE_WS)
 ```
 
