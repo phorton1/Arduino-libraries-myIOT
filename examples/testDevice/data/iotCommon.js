@@ -27,12 +27,12 @@ const VALUE_STORE_PROG     = 0x00;      // only in ESP32 memory
 const VALUE_STORE_NVS      = 0x01;      // stored/retrieved from NVS
 const VALUE_STORE_WS       = 0x02;      // broadcast to / received from WebSockets
 const VALUE_STORE_MQTT_PUB = 0x04;      // published/subscribed to on (the) MQTT broker
-const VALUE_STORE_MQTT_SUB = 0x08;      // published/subscribed to on (the) MQTT broker
+const VALUE_STORE_SUB      = 0x08;      // published/subscribed to on (the) MQTT broker
 const VALUE_STORE_DATA     = 0x10;      // history stored/retrieved from SD database
 const VALUE_STORE_SERIAL   = 0x40;
 
 const VALUE_STORE_PREF     = (VALUE_STORE_NVS | VALUE_STORE_WS);
-const VALUE_STORE_TOPIC    = (VALUE_STORE_MQTT_PUB | VALUE_STORE_MQTT_SUB);
+const VALUE_STORE_TOPIC    = (VALUE_STORE_MQTT_PUB | VALUE_STORE_SUB);
 
 const VALUE_STYLE_NONE       = 0x0000;      // no special styling
 const VALUE_STYLE_READONLY   = 0x0001;      // Value may not be modified
@@ -687,9 +687,11 @@ function addButton(item)
 }
 
 
-function addItem(tbody,item)
+
+
+function addItem(obj,tbody,item)
 {
-    var ele;
+    var ele,td_ele;
 
     if (item.type == VALUE_TYPE_COMMAND)
         ele = addButton(item);
@@ -702,6 +704,21 @@ function addItem(tbody,item)
     else
         ele = addInput(item);
 
+    var td_ele = $('<td />').append(ele);
+
+    if (obj.tooltips)
+    {
+        var text = obj.tooltips[item.id];
+        if (text)
+        {
+            ele.attr({
+                'data-bs-toggle' : 'tooltip',
+                'data-bs-html' : true,
+                'data-bs-placement':'right',
+                'title' : text });
+        }
+    }
+
     tbody.append(
         $('<tr />').append(
             $('<td />').text(item.id),
@@ -709,7 +726,7 @@ function addItem(tbody,item)
 }
 
 
-function fillTable(values,ids,tbody)
+function fillTable(obj,values,ids,tbody)
     // prh - should hide empty tabs
 {
     tbody.empty();
@@ -718,7 +735,7 @@ function fillTable(values,ids,tbody)
     ids.forEach(function (id) {
         var item = values[id];
         if (item)
-            addItem(tbody,item);
+            addItem(obj,tbody,item);
         else
             myAlert("Uknown item_id in fillTable " + tbody.id + ": " + id);
 
@@ -734,9 +751,9 @@ function fillTables(obj)
 {
     $('#device_status').html('');
 
-    fillTable(obj.values,obj.device_items,$('table#device_table tbody'));
-    fillTable(obj.values,obj.config_items,$('table#config_table tbody'));
-    fillTable(obj.values,obj.dash_items,$('table#dashboard_table tbody'));
+    fillTable(obj,obj.values,obj.device_items,$('table#device_table tbody'));
+    fillTable(obj,obj.values,obj.config_items,$('table#config_table tbody'));
+    fillTable(obj,obj.values,obj.dash_items,$('table#dashboard_table tbody'));
 
     // At this point a new device has been loaded ...
     // We do the general enable/disable stuff here.
@@ -798,6 +815,15 @@ function fillTables(obj)
     //       'data-digit-grouping':false,
     //       value:$(this).attr('data-value') })
     //
+
+
+
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+
     console.log("done finishing up")
 }
 
