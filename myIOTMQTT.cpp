@@ -90,7 +90,7 @@ void myIOTMQTT::MQTTCallback(char* ctopic, byte* cmsg, unsigned int len)
         topic = topic.substring(prefix.length());
     }
 
-    my_iot_device->setFromString(topic.c_str(),msg,VALUE_STORE_MQTT_SUB);
+    my_iot_device->setFromString(topic.c_str(),msg,VALUE_STORE_SUB);
     proc_leave();
 }
 
@@ -116,9 +116,9 @@ void myIOTMQTT::MQTTConnect()
             for (auto value:my_iot_device->getValues())
             {
                 valueStore store = value->getStore();
-                if (store & (VALUE_STORE_MQTT_SUB | VALUE_STORE_MQTT_PUB))
+                if (store & (VALUE_STORE_SUB | VALUE_STORE_MQTT_PUB))
                 {
-                    if (store & VALUE_STORE_MQTT_SUB)
+                    if (store & VALUE_STORE_SUB)
                     {
                     // Topics are prefixed using the user-defined thing name, whatever that is
                         String topic = my_iot_device->getName() + "/";

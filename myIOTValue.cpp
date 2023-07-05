@@ -801,7 +801,7 @@ void myIOTValue::publish(String val, valueStore from /*=VALUE_STORE_PROG*/)
     #endif
     #if WITH_MQTT
         // prevent recursion if it CAME from MQTT
-        if (from != VALUE_STORE_MQTT_SUB &&
+        if (from != VALUE_STORE_SUB &&
             m_desc->store & VALUE_STORE_MQTT_PUB)
         {
             bool retain = m_desc->style & VALUE_STYLE_RETAIN;

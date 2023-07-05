@@ -1,14 +1,6 @@
 //--------------------------
 // myIOTDevice.cpp
 //--------------------------
-// memory
-//      68%/12% at compile time
-//          248 start ino setup
-//          216 SD Card
-//          187 | 172 Connected THX37
-//          184 | 157 starting keyboard task
-//          155..144 | 130..112  webUI reloads etc (steady state?)
-// prh - could have a memory watchdog that reboots it every so often
 
 
 #include "myIOTDevice.h"
@@ -55,10 +47,6 @@
     #define DEFAULT_LOG_MEM  0
 #endif
 
-
-// reminder
-// PIN_SDCARD_CS = 5
-
 #define BASE_UUID "38323636-4558-4dda-9188-"
     // We use a somewhat random UUID with the full MAC address
     // of the chip (6 bytes = 12 characters) postpended
@@ -73,24 +61,19 @@
 static valueIdType device_items[] = {
     ID_REBOOT,
     ID_DEVICE_NAME,
-    ID_DEBUG_LEVEL,
-    ID_LOG_LEVEL,
-    ID_DEVICE_WIFI,
-    ID_DEVICE_SSDP,
+    ID_WIFI,
+    ID_SSDP,
     ID_DEVICE_IP,
 #if WITH_NTP
-    ID_DEVICE_TZ,
+    ID_TIMEZONE,
     ID_NTP_SERVER,
 #endif
     ID_AP_PASS,
     ID_STA_SSID,
     ID_STA_PASS,
-#if WITH_MQTT
-    ID_MQTT_IP,
-    ID_MQTT_PORT,
-    ID_MQTT_USER,
-    ID_MQTT_PASS,
-#endif
+
+    ID_DEBUG_LEVEL,
+    ID_LOG_LEVEL,
     ID_LOG_COLORS,
     ID_LOG_DATE,
     ID_LOG_TIME,
@@ -106,7 +89,15 @@ static valueIdType device_items[] = {
     ID_DEVICE_VERSION,
     ID_DEVICE_UUID,
     ID_DEVICE_BOOTING,
-    0
+
+#if WITH_MQTT
+    ID_MQTT_IP,
+    ID_MQTT_PORT,
+    ID_MQTT_USER,
+    ID_MQTT_PASS,
+#endif
+
+    0,
 };
 
 
@@ -130,38 +121,24 @@ static enumValue tzAllowed[] = {
     0};
 
 
+// in order of presentation via UI 'values' command
 
 const valDescriptor myIOTDevice::m_base_descriptors[] =
 {
-    { ID_REBOOT,        VALUE_TYPE_COMMAND,    VALUE_STORE_MQTT_SUB,  VALUE_STYLE_VERIFY,     NULL,                       (void *) reboot },
-    { ID_FACTORY_RESET, VALUE_TYPE_COMMAND,    VALUE_STORE_MQTT_SUB,  VALUE_STYLE_VERIFY,     NULL,                       (void *) factoryReset },
+    { ID_REBOOT,        VALUE_TYPE_COMMAND,    VALUE_STORE_SUB,       VALUE_STYLE_VERIFY,     NULL,                       (void *) reboot },
+    { ID_FACTORY_RESET, VALUE_TYPE_COMMAND,    VALUE_STORE_SUB,       VALUE_STYLE_VERIFY,     NULL,                       (void *) factoryReset },
     { ID_VALUES,        VALUE_TYPE_COMMAND,    VALUE_STORE_PROG,      VALUE_STYLE_VERIFY,     NULL,                       (void *) showValues },
+    { ID_PARAMS,        VALUE_TYPE_COMMAND,    VALUE_STORE_PROG,      VALUE_STYLE_VERIFY,     NULL,                       (void *) showAllParameters },
 #if WITH_WS
     { ID_JSON,          VALUE_TYPE_COMMAND,    VALUE_STORE_PROG,      VALUE_STYLE_VERIFY,     NULL,                       (void *) showJson },
 #endif
-#if WITH_AUTO_REBOOT
-    { ID_AUTO_REBOOT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_OFF_ZERO,  (void *) &_auto_reboot,      NULL, { .int_range = { 0, 0, 1000}}  },
-    #define ID_AUTO_REBOOT    "AUTO_REBOOT"
-#endif
 
-    { ID_LAST_BOOT,     VALUE_TYPE_TIME,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_last_boot, },
-    { ID_UPTIME,        VALUE_TYPE_INT,        VALUE_STORE_PUB,       VALUE_STYLE_HIST_TIME,  (void *) &_device_uptime,   NULL, { .int_range = { 0, -DEVICE_MAX_INT-1, DEVICE_MAX_INT}}  },
-
-    { ID_DEVICE_BOOTING,VALUE_TYPE_BOOL,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_booting,  },
-    { ID_RESET_COUNT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,  { .int_range = { 0, 0, DEVICE_MAX_INT}}  },
-
-    { ID_DEVICE_UUID,   VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_uuid,     },
+    { ID_DEVICE_NAME,   VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_REQUIRED,   NULL,                       NULL,   "myIotDevice" },
     { ID_DEVICE_TYPE,   VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_type,     },
     { ID_DEVICE_VERSION,VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_version,  },
-    { ID_DEVICE_NAME,   VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_REQUIRED,   NULL,                       NULL,   "myIotDevice" },
-    { ID_DEVICE_WIFI,   VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_wifi,     (void *) onChangeWifi, { .int_range = { DEFAULT_DEVICE_WIFI }} },
-    { ID_DEVICE_SSDP,   VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_ssdp,     NULL,                  { .int_range = { DEFAULT_DEVICE_SSDP }} },
+    { ID_DEVICE_UUID,   VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_uuid,     },
     { ID_DEVICE_IP,     VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_ip,       },
-
-#if WITH_NTP
-    { ID_DEVICE_TZ,     VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_tz,       (void *)onChangeTZ,   { .enum_range = { IOT_TZ_EST, tzAllowed }} },
-    { ID_NTP_SERVER,   VALUE_TYPE_STRING,      VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_ntp_server,      NULL,   DEFAULT_NTP_SERVER },
-#endif
+    { ID_DEVICE_BOOTING,VALUE_TYPE_BOOL,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_booting,  },
 
     { ID_DEBUG_LEVEL,   VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &iot_debug_level,  NULL,   { .enum_range = { LOG_LEVEL_DEBUG, logAllowed }} },
     { ID_LOG_LEVEL,     VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &iot_log_level,    NULL,   { .enum_range = { LOG_LEVEL_NONE, logAllowed }} },
@@ -170,10 +147,24 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_LOG_TIME,      VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_log_time,        NULL,   { .int_range = { DEFAULT_LOG_TIME }} },
     { ID_LOG_MEM,       VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_log_mem,         NULL,   { .int_range = { DEFAULT_LOG_MEM }} },
 
-
+    { ID_WIFI,          VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_wifi,     (void *) onChangeWifi, { .int_range = { DEFAULT_DEVICE_WIFI }} },
     { ID_AP_PASS,       VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   DEFAULT_AP_PASSWORD },
     { ID_STA_SSID,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,   "" },
     { ID_STA_PASS,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   "" },
+    { ID_SSDP,          VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_ssdp,     NULL,                  { .int_range = { DEFAULT_DEVICE_SSDP }} },
+#if WITH_NTP
+    { ID_TIMEZONE,     VALUE_TYPE_ENUM,        VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_tz,       (void *)onChangeTZ,   { .enum_range = { IOT_TZ_EST, tzAllowed }} },
+    { ID_NTP_SERVER,   VALUE_TYPE_STRING,      VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_ntp_server,      NULL,   DEFAULT_NTP_SERVER },
+#endif
+
+    { ID_LAST_BOOT,     VALUE_TYPE_TIME,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_last_boot, },
+    { ID_UPTIME,        VALUE_TYPE_INT,        VALUE_STORE_PUB,       VALUE_STYLE_HIST_TIME,  (void *) &_device_uptime,   NULL, { .int_range = { 0, DEVICE_MIN_INT, DEVICE_MAX_INT}}  },
+    { ID_RESET_COUNT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,  { .int_range = { 0, 0, DEVICE_MAX_INT}}  },
+
+#if WITH_AUTO_REBOOT
+    { ID_AUTO_REBOOT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_OFF_ZERO,  (void *) &_auto_reboot,      NULL, { .int_range = { 0, 0, 1000}}  },
+#endif
+
 #if WITH_MQTT
     { ID_MQTT_IP,       VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_NONE,       },
     { ID_MQTT_PORT,     VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,   { .int_range = { 1883, 1, 65535 }} },
@@ -183,6 +174,48 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
 };
 
 #define NUM_BASE_VALUES (sizeof(m_base_descriptors)/sizeof(valDescriptor))
+
+// device tooltips
+// in pairs with a null terminator
+
+static const char *device_tooltips[] = {
+    ID_VALUES           ,   "From Serial or Telnet monitors, shows a list of all of the current <i>parameter</i> <b>values</b>",
+
+    ID_DEVICE_NAME      ,   "<i>User Modifiable</i> <b>name</b> of the device that will be shown in the <i>WebUI</i>, as the <i>Access Point</i> name, and in </i>SSDP</i> (Service Search and Discovery)",
+    ID_DEVICE_TYPE      ,   "The <b>type</b> of the device as determined by the implementor",
+    ID_DEVICE_VERSION   ,   "The <b>version number</b> of the device as determined by the implementor",
+    ID_DEVICE_UUID      ,   "A <b>unique identifier</b> for this device.  The last 12 characters of this are the <i>MAC Address</i> of the device",
+    ID_DEVICE_IP        ,   "The most recent Wifi <b>IP address</b> of the device. Assigned by the WiFi router in <i>Station mode</i> or hard-wired in <i>Access Point</i> mode.",
+    ID_DEVICE_BOOTING   ,   "A value that indicates that the device is in the process of <b>rebooting</b>",
+
+    ID_FACTORY_RESET    ,   "Performs a Factory Reset of the device, restoring all of the <i>parameters</i> to their initial values and rebooting",
+    ID_RESET_COUNT      ,   "The number of times the <b>Factory Reset</b> command has been issued on this device",
+    ID_REBOOT           ,   "Reboots the device.",
+    ID_LAST_BOOT        ,   "The <b>time</b> at which the device was last rebooted.",
+    ID_UPTIME           ,   "LAST_BOOT value as integer seconds since Jan 1, 1970.  Displayed as he number of <i>hours, minutes, and seconds</i> since the device was last rebooted in the WebUI",
+
+#if WITH_AUTO_REBOOT
+    ID_AUTO_REBOOT      ,   "How often, in <b>seconds</b> to automatically <b>reboot the device</b>.",
+#endif
+
+    ID_AP_PASS          ,   "The <i>encrypted</i> <b>Password</b> for the <i>Access Point</i> when in AP mode",
+    ID_STA_SSID         ,   "The <b>SSID</b> (name) of the WiFi network the device will attempt to connect to as a <i>Station</i>.  Setting this to <b>blank</b> force the device into <i>AP</i> (Access Point) mode",
+    ID_STA_PASS         ,   "The <i>encrypted</i> <b>Password</b> for connecting in <i>STA</i> (Station) mode",
+    ID_WIFI             ,   "Turns the device's <b>Wifi</b> on and off",
+    ID_SSDP             ,   "Turns <b>SSDP</b> (Service Search and Discovery Protocol) on and off.  SSDP allows a device attached to Wifi in <i>Station mode</i> to be found by other devices on the LAN (Local Area Network). Examples include the <b>Network tab</b> in <i>Windows Explorer</i> on a <b>Windows</b>",
+
+#if WITH_NTP
+    ID_TIMEZONE         ,   "Sets the <b>timezone</b> for the RTC (Real Time Clock) when connected to WiFi in <i>Station mode</i>. There is a very limited set of timezones currently implemented.",
+    ID_NTP_SERVER       ,   "Specifies the NTP (Network Time Protocol) <b>Server</b> that will be used when connected to Wifi as a <i>Station</i>",
+#endif
+
+    ID_DEBUG_LEVEL      ,   "Sets the amount of detail that will be shown in the <i>Serial</i> and <i>Telnet</i> output.",
+    ID_LOG_LEVEL        ,   "Sets the amount of detail that will be shown in the <i>Logfile</i> output. <b>Note</b> that a logfile is only created if the device is built with an <b>SD Card</b> on which to store it!!",
+    ID_LOG_COLORS       ,   "Sends standard <b>ansi color codes</b> to the <i>Serial and Telnet</i> output to highlight <i>errors, warnings,</i> etc",
+    ID_LOG_DATE         ,   "Shows the <b>date</b> in Logfile and Serial output",
+    ID_LOG_TIME         ,   "Shows the current <b>time</b>, including <i>milliseconds</i> in Logfile and Serial output",
+    ID_LOG_MEM          ,   "Shows the <i>current</i> and <i>least</i> <b>memory available</b>, in <i>KB</i>, on the ESP32, in Logfile and Serial output",
+    0 };
 
 
 //------------------------
@@ -226,9 +259,17 @@ valueIdType *myIOTDevice::m_dash_items = NULL;
 valueIdType *myIOTDevice::m_config_items = NULL;
 valueIdType *myIOTDevice::m_device_items = device_items;
 
+const char  **g_derived_tooltips = NULL;
+
 myIOTDevice *my_iot_device;
 
 
+// certain most important current methods
+
+void myIOTDevice::addDerivedToolTips(const char **derived_tooltips)
+{
+    g_derived_tooltips = derived_tooltips;
+}
 
 // static
 void myIOTDevice::onChangeWifi(const myIOTValue *desc, bool val)
@@ -490,7 +531,7 @@ void myIOTDevice::setup()
     // and use a consistent onConnectStatusChanged() method, where there
     // is a new mode IOT_CONNECT_OFF and IOT_CONNECT_ON is equal
     // to the current IOT_CONNECT_NONE, and IOT_CONNECT_OFF encapsulates
-    // ID_DEVICE_WIFI except for the user event of turning it on or off.
+    // ID_WIFI except for the user event of turning it on or off.
 
     my_iot_wifi.setup();
 
@@ -590,8 +631,6 @@ void myIOTDevice::onConnectAP()
 }
 
 
-
-
 #if WITH_WS
     void myIOTDevice::wsBroadcast(const char *msg)
     {
@@ -661,8 +700,269 @@ void myIOTDevice::showValues()
 }
 
 
+//----------------------
+// showAllParameters()
+//----------------------
+// Outputs HTML table for inclusion in documentation
+
+const char *findToolTip(const char *id)
+{
+    const char **ptr = device_tooltips;
+    while (*ptr)
+    {
+        const char *left = *ptr++;
+        const char *right = *ptr++;
+        if (!strcmp(id,left))
+            return right;
+    }
+    ptr = g_derived_tooltips;
+    while (*ptr)
+    {
+        const char *left = *ptr++;
+        const char *right = *ptr++;
+        if (!strcmp(id,left))
+            return right;
+    }
+    return NULL;
+}
+
+const char *getTypeAsString(myIOTValue *value)
+{
+    switch (value->getType())
+    {
+        case VALUE_TYPE_COMMAND : return "COMMAND";     // 'X'        // monadic (commands)
+        case VALUE_TYPE_BOOL    : return "BOOL";        // 'B'        // a boolean (0 or 1)
+        case VALUE_TYPE_CHAR    : return "CHAR";        // 'C'        // a single character
+        case VALUE_TYPE_STRING  : return "STRING";      // 'S'        // a string
+        case VALUE_TYPE_INT     : return "INT";         // 'I'        // a signed 32 bit integer
+        case VALUE_TYPE_TIME    : return "TIME";        // 'T'        // time stored as 32 bit unsigned integer
+        case VALUE_TYPE_FLOAT   : return "FLOAT";       // 'F'        // a float
+        case VALUE_TYPE_ENUM    : return "ENUM";        // 'E'        // enumerated integer
+        case VALUE_TYPE_BENUM   : return "BENUM";       // 'J'        // bitwise integer
+    }
+    return "UNKNOWN";
+}
+
+
+void addParamFloat(bool strip_zeros, String &descrip, float f)
+{
+    static char float_buf[12];
+    sprintf(float_buf,"%0.3f",f);
+    if (strip_zeros)
+    {
+        char *index = strstr(float_buf,".000");
+        if (index) *index = 0;
+    }
+    descrip += float_buf;
+}
+
+
+void myIOTDevice::showAllParameters()
+    // This function is intended for my own use to generate a table of
+    // parameters for the device to be included in the documentation.
+    // It ONLY lists parameters for which tooltips are found.
+{
+    LOGU("PARAMS");
+    for (auto value:my_iot_device->m_values)
+    {
+        const char *tip = findToolTip(value->getId());
+        // if (tip)
+        {
+            String descrip;
+            if (tip) descrip = tip;
+            valueType typ = value->getType();
+            valueStyle style = value->getStyle();
+            valueStore store = value->getStore();
+            const valDescriptor *desc = value->getDesc();
+
+            // EXPAND THE DESCRIP (tip) to include extra lines
+            // readonly just displays the hardwired value
+
+            if (style & VALUE_STYLE_READONLY)
+            {
+                descrip += "\n   <br><i>Readonly</i>";
+            }
+
+            // append RANGES (allowed values) and DEFAULTS by TYPE
+
+            else if (typ != VALUE_TYPE_COMMAND)
+            {
+                if (typ == VALUE_TYPE_ENUM || typ == VALUE_TYPE_BENUM)
+                {
+                    descrip += "\n   <br><i>allowed</i> : ";
+
+                    uint32_t def = desc->int_range.default_value;
+
+                    int num = 0;
+                    bool started = 0;
+                    enumValue *p = desc->enum_range.allowed;
+                    enumValue default_value = *p;
+                    while (*p)
+                    {
+                        if (num == def)
+                            default_value = *p;
+                        if (started)
+                            descrip += ", ";
+                        descrip += "<b>";
+                        descrip += String(num++);
+                        descrip += "</b>";
+                        descrip += "=";
+                        descrip += *p;
+                        p++;
+                        started = 1;
+                    }
+
+                    descrip += "\n   <br><i>default</i> : ";
+                    descrip += "<b>";
+                    descrip += String(def);
+                    descrip += "</b>";
+                    if (typ == VALUE_TYPE_ENUM)
+                    {
+                        descrip += "=";
+                        descrip += default_value;
+                    }
+                }
+                else if (typ == VALUE_TYPE_STRING)
+                {
+                    if (style & VALUE_STYLE_REQUIRED)
+                        descrip += "\n   <br><b>Required</b> (must not be blank)";
+                    const char *def = desc->default_value;
+                    if (def && *def)
+                    {
+                        descrip += "\n   <br><i>default</i> : ";
+                        descrip += def;
+                    }
+                }
+                else if (typ == VALUE_TYPE_BOOL)
+                {
+                    int def = desc->int_range.default_value;
+                    descrip += "\n   <br><i>default</i> : ";
+                    descrip += def ? "<b>1</b>=on" : "<b>0</b>=off";
+                }
+                else if (typ == VALUE_TYPE_INT)
+                {
+                    int def = desc->int_range.default_value;
+                    int mn = desc->int_range.int_min;
+                    int mx = desc->int_range.int_max;
+                    descrip += "\n   <br><i>default</i> : ";
+                    descrip += "<b>";
+                    descrip += String(def);
+                    descrip += "</b>";
+
+                    if (!def && style & VALUE_STYLE_OFF_ZERO)
+                        descrip += "=off";
+
+                    if ((style & VALUE_STYLE_OFF_ZERO && !mn) || (mn && mn != DEVICE_MIN_INT))
+                    {
+                        descrip += "&nbsp;&nbsp;&nbsp;<i>min</i> : ";
+                        descrip += String(mn);
+                        if (!mn && style & VALUE_STYLE_OFF_ZERO)
+                            descrip += "=off";
+                    }
+                    if (mx && mx != DEVICE_MAX_INT)
+                    {
+                        descrip += "&nbsp;&nbsp;&nbsp;<i>max</i> : ";
+                        descrip += String(mx);
+                    }
+                }
+                else if (typ == VALUE_TYPE_FLOAT)
+                {
+                    float def = desc->float_range.default_value;
+                    float mn = desc->float_range.float_min;
+                    float mx = desc->float_range.float_max;
+
+                    descrip += "\n   <br><i>default</i> : ";
+                    descrip += "<b>";
+                    addParamFloat(0,descrip,def);
+                    descrip += "</b>";
+
+                    if (mn && mn != 0.00)
+                    {
+                        descrip += "&nbsp;&nbsp;&nbsp;<i>min</i> : ";
+                        addParamFloat(1,descrip,mn);
+                    }
+                    descrip += "&nbsp;&nbsp;&nbsp;<i>max</i> : ";
+                    addParamFloat(1,descrip,mx);
+                }
+
+                // note any Memory Only values
+
+                if (!(store & VALUE_STORE_NVS))
+                    descrip += "\n   <br><i>Memory Only</i>";
+            }
+
+            if (descrip.startsWith("\n   <br>"))
+                descrip = descrip.substring(8);
+
+            // BUILD THE LINE
+
+            String rslt = "<tr><td valign='top'><b>";
+            rslt += value->getId();
+            rslt += "</b></td><td valign='top'>";
+            rslt += getTypeAsString(value);
+            rslt += "</td><td valign='top'>";
+            rslt += descrip;
+            rslt += "</td></tr>";
+
+            // output the line
+
+            Serial.println(rslt);
+            #if WITH_TELNET
+			if (myIOTSerial::telnetConnected())
+				myIOTSerial::telnet.println(rslt);
+            #endif
+        }
+    }
+}
+
+
+
+
+//-----------------------------
+// valueListJson()
+//-----------------------------
 
 #if WITH_WS
+
+
+    static void addToolTips(String &rslt)
+    {
+        rslt += ",\n";
+        rslt += "\"tooltips\":{\n";
+
+        const char **ptr = device_tooltips;
+
+        bool started = false;
+        while (*ptr)
+        {
+            const char *left = *ptr++;
+            const char *right = *ptr++;
+            if (started)
+                rslt += ",\n";
+            rslt += "\"";
+            rslt += left;
+            rslt += "\":\"";
+            rslt += right;
+            rslt += "\"";
+            started = true;
+        }
+        ptr = g_derived_tooltips;
+        while (*ptr)
+        {
+            const char *left = *ptr++;
+            const char *right = *ptr++;
+            if (started)
+                rslt += ",\n";
+            rslt += "\"";
+            rslt += left;
+            rslt += "\":\"";
+            rslt += right;
+            rslt += "\"";
+            started = true;
+        }
+        rslt += "}\n";
+    }
+
 
     static String addIdList(const char *name, valueIdType *ptr)
     {
@@ -707,6 +1007,8 @@ void myIOTDevice::showValues()
         rslt += addIdList("dash_items",m_dash_items);
         rslt += addIdList("config_items",m_config_items);
         rslt += addIdList("device_items",m_device_items);
+
+        addToolTips(rslt);
 
         rslt += "}\n";
         return rslt;

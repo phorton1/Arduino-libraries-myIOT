@@ -25,6 +25,8 @@ class myIOTValue
             // called from factoryReset(), restart the m_preferences member
             // so we can write the RESET_COUNT for next boot
 
+        const valDescriptor *getDesc() const { return m_desc; }
+
         valueIdType getId()    const { return m_desc->id; }
         valueType   getType()  const { return m_desc->type; }
         valueStore  getStore() const { return m_desc->store; }

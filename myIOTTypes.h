@@ -11,7 +11,8 @@
 
 #define DEBUG_PASSWORDS  0
 
-#define DEVICE_MAX_INT   2147483647
+#define DEVICE_MAX_INT   2147483647L
+#define DEVICE_MIN_INT   -2147483648L
 
 // default settings are for my generic IOT device (bilgeAlarm)
 // I can modify this at compile time via /base/bat/setup_platform.pm
@@ -107,11 +108,11 @@
 #define VALUE_STORE_NVS       0x01      // stored/retrieved from NVS (EEPROM)
 #define VALUE_STORE_WS        0x02      // broadcast to / received from WebSockets
 #define VALUE_STORE_MQTT_PUB  0x04      // published to (the) MQTT broker
-#define VALUE_STORE_MQTT_SUB  0x08      // subscribed from (the) MQTT broker
+#define VALUE_STORE_SUB       0x08      // subscribed from (the) MQTT broker
 #define VALUE_STORE_SERIAL    0x10      // recieved from serial port
 
 #define VALUE_STORE_PREF      (VALUE_STORE_NVS | VALUE_STORE_WS)
-#define VALUE_STORE_TOPIC     (VALUE_STORE_MQTT_PUB | VALUE_STORE_MQTT_SUB | VALUE_STORE_WS)
+#define VALUE_STORE_TOPIC     (VALUE_STORE_MQTT_PUB | VALUE_STORE_SUB | VALUE_STORE_WS)
 #define VALUE_STORE_PUB       (VALUE_STORE_MQTT_PUB | VALUE_STORE_WS)
     // publish only topic, also to WS - used for items only stored in RAM or RTC memory
 

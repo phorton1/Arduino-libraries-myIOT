@@ -80,7 +80,7 @@ void myIOTWebSockets::setup()
     proc_entry();
 
     m_web_sockets.onEvent(webSocketEvent);
-    if (my_iot_device->getBool(ID_DEVICE_WIFI))
+    if (my_iot_device->getBool(ID_WIFI))
         begin();
 
     #ifdef WS_TASK

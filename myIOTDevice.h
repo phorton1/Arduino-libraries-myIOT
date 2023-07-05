@@ -14,34 +14,27 @@
 
 #define DEFAULT_AP_PASSWORD   "11111111"
 
-#define ID_LAST_BOOT      "LAST_BOOT"
-#define ID_UPTIME         "UPTIME"
+
+// IDS
+// commands
+
 #define ID_REBOOT         "REBOOT"
 #define ID_FACTORY_RESET  "FACTORY_RESET"
 #define ID_VALUES         "VALUES"
+#define ID_PARAMS         "PARAMS"
 #define ID_JSON           "JSON"
 
-#define ID_DEVICE_UUID    "DEVICE_UUID"
+// things with the word DEVICE in them
+
+#define ID_DEVICE_NAME    "DEVICE_NAME"
 #define ID_DEVICE_TYPE    "DEVICE_TYPE"
 #define ID_DEVICE_VERSION "DEVICE_VERSION"
-#define ID_DEVICE_NAME    "DEVICE_NAME"
-#define ID_DEVICE_WIFI    "WIFI"
+#define ID_DEVICE_UUID    "DEVICE_UUID"
 #define ID_DEVICE_IP      "DEVICE_IP"
-#define ID_DEVICE_SSDP    "SSDP"
-
-#if WITH_NTP
-    #define ID_DEVICE_TZ      "DEVICE_TZ"
-    #define ID_NTP_SERVER     "NTP_SERVER"
-#endif
-
-#if WITH_AUTO_REBOOT
-    #define ID_AUTO_REBOOT    "AUTO_REBOOT"
-#endif
-
 #define ID_DEVICE_BOOTING "DEVICE_BOOTING"
-#define ID_RESET_COUNT    "RESET_COUNT"
 
-    // only kept in memory
+// debug stuff
+
 #define ID_DEBUG_LEVEL    "DEBUG_LEVEL"
 #define ID_LOG_LEVEL      "LOG_LEVEL"
 #define ID_LOG_COLORS     "LOG_COLORS"
@@ -49,14 +42,36 @@
 #define ID_LOG_TIME       "LOG_TIME"
 #define ID_LOG_MEM        "LOG_MEM"
 
+
+// wifi stuff
+
+#define ID_WIFI           "WIFI"
 #define ID_AP_PASS        "AP_PASS"
 #define ID_STA_SSID       "STA_SSID"
 #define ID_STA_PASS       "STA_PASS"
-#define ID_MQTT_IP        "MQTT_IP"
-#define ID_MQTT_PORT      "MQTT_PORT"
-#define ID_MQTT_USER      "MQTT_USER"
-#define ID_MQTT_PASS      "MQTT_PASS"
-#define ID_OTA_PASS       "OTA_PASS"
+#define ID_SSDP           "SSDP"
+
+#if WITH_NTP
+    #define ID_TIMEZONE      "TIMEZONE"
+    #define ID_NTP_SERVER    "NTP_SERVER"
+#endif
+
+// miscellaneous stuff
+
+#define ID_LAST_BOOT      "LAST_BOOT"
+#define ID_UPTIME         "UPTIME"
+#define ID_RESET_COUNT    "RESET_COUNT"
+
+#if WITH_AUTO_REBOOT
+    #define ID_AUTO_REBOOT    "AUTO_REBOOT"
+#endif
+
+#ifdef WITH_MQTT
+    #define ID_MQTT_IP        "MQTT_IP"
+    #define ID_MQTT_PORT      "MQTT_PORT"
+    #define ID_MQTT_USER      "MQTT_USER"
+    #define ID_MQTT_PASS      "MQTT_PASS"
+#endif
 
 
 // timezone addition
@@ -243,6 +258,7 @@ class myIOTDevice
             m_config_items = config;
             if (device != NULL) m_device_items = device;
         }
+        void addDerivedToolTips(const char **derived_tooltips);
 
 
         static void onChangeWifi(const myIOTValue *desc, bool val);
@@ -309,6 +325,8 @@ class myIOTDevice
         void handleKeyboard();
         static void keyboardTask(void *param);
         static void showValues();
+        static void showAllParameters();
+
 
         #if WITH_WS
             static void showJson();

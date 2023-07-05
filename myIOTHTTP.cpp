@@ -190,7 +190,7 @@ void myIOTHTTP::onConnectStation()
 
     // changes to the _device_ssdp boolean require a reboot
 
-    if (my_iot_device->getBool(ID_DEVICE_SSDP))
+    if (my_iot_device->getBool(ID_SSDP))
     {
         LOGI("Starting SSDP");
         SSDP.end();
@@ -230,7 +230,7 @@ void myIOTHTTP::onConnectStation()
     #if WITH_NTP
 
         String ntpServer = my_iot_device->getString(ID_NTP_SERVER);    // "pool.ntp.org";
-        uint32_t tz_enum = my_iot_device->getEnum(ID_DEVICE_TZ);
+        uint32_t tz_enum = my_iot_device->getEnum(ID_TIMEZONE);
         const char *tz_string = tzString(static_cast<IOT_TIMEZONE>(tz_enum));
         LOGI("Connecting to ntpServer=%s TZ(%d)=%s",ntpServer.c_str(),tz_enum,tz_string);
 
