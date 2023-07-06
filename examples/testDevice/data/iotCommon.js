@@ -41,7 +41,7 @@ const VALUE_STYLE_PASSWORD   = 0x0004;      // displayed as '********', protecte
 const VALUE_STYLE_TIME_SINCE = 0x0008       // ui shows '23 minutes ago' in addition to the time string
 const VALUE_STYLE_VERIFY     = 0x0010;      // UI buttons will display a confirm dialog
 const VALUE_STYLE_LONG       = 0x0020;      // UI will show a long (rather than default 15ish) String Input Control
-const VALUE_STYLE_OFF_ZERO   = 0x0040;      // Allows 0 below min and displays it as "OFF"
+const VALUE_STYLE_OFF_ZERO   = 0x0040;      // zero is semantically equal to OFF
 const VALUE_STYLE_RETAIN     = 0x0100;      // MQTT if published, will be "retained"
 
 
@@ -593,13 +593,6 @@ function addInput(item)
         is_number ? "number" :   //  && !(item.style & VALUE_STYLE_OFF_ZERO) ? 'number' :
         'text'
 
-    // My modified spinner renders 0 as off for those with class "off_zero"
-    // So we go ahead and morph the value "off" to zero here.
-    // Without the modified spinner "off" is not supported anyways (but 0 works consistently)
-
-    if (item.style & VALUE_STYLE_OFF_ZERO && item.value == "off")
-        item.value = 0;
-
     var input = $('<input>')
         .addClass(item.id)
         .addClass('myiot')
@@ -614,21 +607,15 @@ function addInput(item)
             'data-min' : item.min,
         });
 
-    // for OFF_ZERO we set the min to zero, skip during incs/decs,
-    // and enforce it via the data-min in our onchange
-
-    var use_min = item.min;
     if (item.style & VALUE_STYLE_OFF_ZERO)
-    {
-        use_min = 0;
         input.addClass('off_zero');
-    }
+
     if (item.style & VALUE_STYLE_LONG)
         input.attr({size:80});
 
     if (is_number)
         input.attr({
-            min: is_bool ? 0 : use_min,
+            min: is_bool ? 0 : item.min,
             max: is_bool ? 1 : item.max
         })
     if (item.type == VALUE_TYPE_FLOAT)
@@ -787,36 +774,7 @@ function fillTables(obj)
             $('#dashboard_button').click();
     }
 
-    // change all my numeric inputs to the bootstrap-inner-spinner.js thing
-    // without groupings ... see iotCommon.css
-
-    if(jQuery().inputSpinner)
-    {
-        console.log("Setting up spinner")
-
-        // $("input[data-style=" + VALUE_STYLE_OFF_ZERO + "]")
-        $("input[type='number']")
-            .addClass('my_spinner_input')
-            .attr({
-               'data-digit-grouping':false })
-            .inputSpinner({
-                textAlign : 'left',
-                groupClass : 'my_spinner_div',
-                buttonsWidth : '1rem',
-                buttonsClass : 'btn-outline-secondary my_spinner_btn' });
-    }
-
-    // we reset the value to the data-value here,
-    // after creating the spinner, so that 'off'
-    // will show for zero.
-
-    //$("input[type='number']")
-    //    .attr({
-    //       'data-digit-grouping':false,
-    //       value:$(this).attr('data-value') })
-    //
-
-
+    // Enable tooltips on any controls that have them
 
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

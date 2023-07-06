@@ -127,7 +127,7 @@
 #define VALUE_STYLE_TIME_SINCE  0x0008      // UI shows '23 minutes ago' in addition to the time string
 #define VALUE_STYLE_VERIFY      0x0010      // UI command buttons will display a confirm dialog
 #define VALUE_STYLE_LONG        0x0020      // UI will show a long (rather than default 15ish) String Input Control
-#define VALUE_STYLE_OFF_ZERO    0x0040      // Allows 0 below min and displays it as "OFF"
+#define VALUE_STYLE_OFF_ZERO    0x0040      // zero is semantically equal to OFF
 #define VALUE_STYLE_RETAIN      0x0100      // MQTT if published, will be "retained"
     // CAREFUL with the use of MQTT retained messages!!
     // They can only be cleared on the rpi with:

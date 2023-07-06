@@ -335,10 +335,7 @@ String  myIOTValue::getAsString()
         case VALUE_TYPE_INT    :
         {
             int val = getInt();
-            if (!val && (m_desc->style & VALUE_STYLE_OFF_ZERO))
-                rslt = "off";
-            else
-                rslt = String(getInt());
+            rslt = String(getInt());
             break;
         }
         case VALUE_TYPE_FLOAT  : rslt = String(getFloat(),FIXED_FLOAT_PRECISION); break;
@@ -435,17 +432,10 @@ void myIOTValue::setInt(int val, valueStore from)
     checkReadonly(from);
     checkType(VALUE_TYPE_INT);
 
-    if (m_desc->style & VALUE_STYLE_OFF_ZERO && val==0)
-    {
-        // allowed regardles of min
-    }
-    else
-    {
-        int min = m_desc->int_range.int_min;
-        int max = m_desc->int_range.int_max;
-        if (val<min || val>max)
-            throw String("integer(" + String(val) + ") is out of range " + String(min) + ".." + String(max));
-    }
+    int min = m_desc->int_range.int_min;
+    int max = m_desc->int_range.int_max;
+    if (val<min || val>max)
+        throw String("integer(" + String(val) + ") is out of range " + String(min) + ".." + String(max));
 
     intChangeFxn fxn = (intChangeFxn) m_desc->fxn_ptr;
     if (fxn) fxn(this,val);
@@ -675,8 +665,6 @@ void myIOTValue::setFromString(const char *ptr, valueStore from)
             int val = 0;
             if (len==0)
                 LOGW("setting int %s to 0 from empty value",m_desc->id);
-            else if (!strcmp(ptr,"off"))
-                LOGW("setting int %s to 0 from 'off'",m_desc->id);
             else
             {
                 checkNumber(ptr);
@@ -817,14 +805,6 @@ void myIOTValue::publish(String val, valueStore from /*=VALUE_STORE_PROG*/)
     {
         bool is_off_int = false;
         String str_val = val_ptr ? val_ptr : getAsString();
-        if (VALUE_TYPE_INT && (m_desc->style & VALUE_STYLE_OFF_ZERO))
-        {
-            if (str_val == "off" || str_val == "0")
-            {
-                is_off_int = true;
-                str_val = "off";
-            }
-        }
 
         String command = "{\"set\":\"";
         command += m_desc->id;
@@ -947,7 +927,6 @@ String myIOTValue::getIntAsString(int val)
     // For bools, ints, and enums returns the string representation
     // of the value (including "off", enum strings, or number)
     // Returns "" otherwise,
-    // DOES NOT DO ANY RANGE CHECKING or handle the gap in VALUE_STYLE_OFF_ZERO!!
     // May crash if presented with enum values out of range!!
 {
     String rslt = "";

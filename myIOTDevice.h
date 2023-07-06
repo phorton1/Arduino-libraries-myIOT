@@ -258,7 +258,7 @@ class myIOTDevice
             m_config_items = config;
             if (device != NULL) m_device_items = device;
         }
-        void addDerivedToolTips(const char **derived_tooltips);
+        void addDerivedToolTips(const char **derived_tooltips, const char **extra_text=NULL);
 
 
         static void onChangeWifi(const myIOTValue *desc, bool val);

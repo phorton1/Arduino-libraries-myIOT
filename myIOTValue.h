@@ -80,8 +80,6 @@ class myIOTValue
             // For bools, ints, and enums returns the string representation
             // of the value (including "off", enum strings, or number)
             // Returns "" otherwise,
-            // DOES NOT DO ANY RANGE CHECKING or handle the gap in VALUE_STYLE_OFF_ZERO!!
-            // May crash if presented with enum values out of range!!
 
         void clearNVSValue();
             // necessary when changing the type of a value to get it out of NVS

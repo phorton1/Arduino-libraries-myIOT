@@ -199,10 +199,10 @@ static const char *device_tooltips[] = {
 #endif
 
     ID_AP_PASS          ,   "The <i>encrypted</i> <b>Password</b> for the <i>Access Point</i> when in AP mode",
-    ID_STA_SSID         ,   "The <b>SSID</b> (name) of the WiFi network the device will attempt to connect to as a <i>Station</i>.  Setting this to <b>blank</b> force the device into <i>AP</i> (Access Point) mode",
+    ID_STA_SSID         ,   "The <b>SSID</b> (name) of the WiFi network the device will attempt to connect to as a <i>Station</i>.  Setting this to <b>blank</b> will force the device into <i>AP</i> (Access Point) mode at the next <b>reboot</b>",
     ID_STA_PASS         ,   "The <i>encrypted</i> <b>Password</b> for connecting in <i>STA</i> (Station) mode",
     ID_WIFI             ,   "Turns the device's <b>Wifi</b> on and off",
-    ID_SSDP             ,   "Turns <b>SSDP</b> (Service Search and Discovery Protocol) on and off.  SSDP allows a device attached to Wifi in <i>Station mode</i> to be found by other devices on the LAN (Local Area Network). Examples include the <b>Network tab</b> in <i>Windows Explorer</i> on a <b>Windows</b>",
+    ID_SSDP             ,   "Turns <b>SSDP</b> (Service Search and Discovery Protocol) on and off.  SSDP allows a device attached to Wifi in <i>Station mode</i> to be found by other devices on the LAN (Local Area Network). Examples include the <b>Network tab</b> in <i>Windows Explorer</i> on a <b>Windows</b> computer",
 
 #if WITH_NTP
     ID_TIMEZONE         ,   "Sets the <b>timezone</b> for the RTC (Real Time Clock) when connected to WiFi in <i>Station mode</i>. There is a very limited set of timezones currently implemented.",
@@ -260,15 +260,17 @@ valueIdType *myIOTDevice::m_config_items = NULL;
 valueIdType *myIOTDevice::m_device_items = device_items;
 
 const char  **g_derived_tooltips = NULL;
+const char  **g_extra_text = NULL;
 
 myIOTDevice *my_iot_device;
 
 
 // certain most important current methods
 
-void myIOTDevice::addDerivedToolTips(const char **derived_tooltips)
+void myIOTDevice::addDerivedToolTips(const char **derived_tooltips, const char **extra_text)
 {
     g_derived_tooltips = derived_tooltips;
+    g_extra_text = extra_text;
 }
 
 // static
@@ -726,6 +728,20 @@ const char *findToolTip(const char *id)
     return NULL;
 }
 
+const char *findExtraText(const char *id)
+{
+    const char **ptr = g_extra_text;
+    while (ptr && *ptr)
+    {
+        const char *left = *ptr++;
+        const char *right = *ptr++;
+        if (!strcmp(id,left))
+            return right;
+    }
+    return NULL;
+}
+
+
 const char *getTypeAsString(myIOTValue *value)
 {
     switch (value->getType())
@@ -766,10 +782,17 @@ void myIOTDevice::showAllParameters()
     for (auto value:my_iot_device->m_values)
     {
         const char *tip = findToolTip(value->getId());
+        const char *extra = findExtraText(value->getId());
         // if (tip)
         {
             String descrip;
             if (tip) descrip = tip;
+            if (extra)
+            {
+                if (tip)
+                    descrip += "\n   <br>";
+                descrip += extra;
+            }
             valueType typ = value->getType();
             valueStyle style = value->getStyle();
             valueStore store = value->getStore();
