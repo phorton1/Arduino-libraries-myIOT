@@ -713,6 +713,8 @@ const char *findToolTip(const char *id)
     while (ptr && *ptr)
     {
         const char *left = *ptr++;
+        if (!*ptr)
+            return NULL;
         const char *right = *ptr++;
         if (!strcmp(id,left))
             return right;
@@ -721,6 +723,8 @@ const char *findToolTip(const char *id)
     while (ptr && *ptr)
     {
         const char *left = *ptr++;
+        if (!*ptr)
+            return NULL;
         const char *right = *ptr++;
         if (!strcmp(id,left))
             return right;
@@ -734,6 +738,8 @@ const char *findExtraText(const char *id)
     while (ptr && *ptr)
     {
         const char *left = *ptr++;
+        if (!*ptr)
+            return NULL;
         const char *right = *ptr++;
         if (!strcmp(id,left))
             return right;
@@ -790,7 +796,7 @@ void myIOTDevice::showAllParameters()
             if (extra)
             {
                 if (tip)
-                    descrip += "\n   <br>";
+                    descrip += " ";
                 descrip += extra;
             }
             valueType typ = value->getType();
