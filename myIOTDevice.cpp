@@ -88,6 +88,7 @@ static valueIdType device_items[] = {
     ID_DEVICE_TYPE,
     ID_DEVICE_VERSION,
     ID_DEVICE_UUID,
+    ID_DEVICE_URL,
     ID_DEVICE_BOOTING,
 
 #if WITH_MQTT
@@ -137,6 +138,7 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_DEVICE_TYPE,   VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_type,     },
     { ID_DEVICE_VERSION,VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_version,  },
     { ID_DEVICE_UUID,   VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_uuid,     },
+    { ID_DEVICE_URL,    VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_url,      },
     { ID_DEVICE_IP,     VALUE_TYPE_STRING,     VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_ip,       },
     { ID_DEVICE_BOOTING,VALUE_TYPE_BOOL,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_booting,  },
 
@@ -185,6 +187,7 @@ static const char *device_tooltips[] = {
     ID_DEVICE_TYPE      ,   "The <b>type</b> of the device as determined by the implementor",
     ID_DEVICE_VERSION   ,   "The <b>version number</b> of the device as determined by the implementor",
     ID_DEVICE_UUID      ,   "A <b>unique identifier</b> for this device.  The last 12 characters of this are the <i>MAC Address</i> of the device",
+    ID_DEVICE_URL       ,   "The <b>url</b> of a webpage for this device.",
     ID_DEVICE_IP        ,   "The most recent Wifi <b>IP address</b> of the device. Assigned by the WiFi router in <i>Station mode</i> or hard-wired in <i>Access Point</i> mode.",
     ID_DEVICE_BOOTING   ,   "A value that indicates that the device is in the process of <b>rebooting</b>",
 
@@ -222,11 +225,11 @@ static const char *device_tooltips[] = {
 // vars
 //------------------------
 
-RTC_NOINIT_ATTR int myIOTDevice::m_boot_count;
 
 String myIOTDevice::_device_uuid;
 String myIOTDevice::_device_type = IOT_DEVICE;
 String myIOTDevice::_device_version = IOT_DEVICE_VERSION;
+String myIOTDevice::_device_url = DEFAULT_DEVICE_URL;
 bool myIOTDevice::_device_wifi = DEFAULT_DEVICE_WIFI;
 bool myIOTDevice::_device_ssdp = DEFAULT_DEVICE_SSDP;
 
@@ -241,19 +244,22 @@ time_t myIOTDevice::_device_last_boot;
 int    myIOTDevice::_device_uptime;
 bool   myIOTDevice::_device_booting;
 
-#if WITH_AUTO_REBOOT
-    int myIOTDevice::_auto_reboot;
-#endif
-
-#if WITH_SD
-    bool   myIOTDevice::m_sd_started;
-#endif
-
 bool myIOTDevice::_log_colors = DEFAULT_LOG_COLORS;
 bool myIOTDevice::_log_date = DEFAULT_LOG_DATE;
 bool myIOTDevice::_log_time = DEFAULT_LOG_TIME;
 bool myIOTDevice::_log_mem = DEFAULT_LOG_MEM;
 
+#if WITH_AUTO_REBOOT
+    int myIOTDevice::_auto_reboot;
+#endif
+
+// member variables (not parameters)
+
+#if WITH_SD
+    bool   myIOTDevice::m_sd_started;
+#endif
+
+RTC_NOINIT_ATTR int myIOTDevice::m_boot_count;
 
 valueIdType *myIOTDevice::m_dash_items = NULL;
 valueIdType *myIOTDevice::m_config_items = NULL;

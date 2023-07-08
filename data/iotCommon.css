@@ -56,3 +56,10 @@
 }
 
 
+/* make the device name link white */
+
+.my_device_link
+{
+    color: #ffffff;
+    text-decoration:none;
+}

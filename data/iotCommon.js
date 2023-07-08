@@ -52,6 +52,7 @@ var web_socket;
 var ws_connect_count = 0;
 var ws_open_count = 0;
 var device_name = '';
+var device_url = '';
 var device_uuid = '';
 var device_has_sd = 0;
 var device_list;
@@ -419,10 +420,11 @@ function handleWS(ws_event)
     {
         device_name = obj.device_name;
         device_uuid = obj.uuid;
+        device_url = obj.device_url;
         console.log("device_name=" + device_name + " device_uuid=$uuid");
         if (!is_server)
             document.title = device_name;
-        $('#DEVICE_NAME').html(device_name);
+        $('#DEVICE_NAME').html('<a href="' + device_url + '" class="my_device_link" target="_blank">' + device_name + "</a>");
         device_has_sd = parseInt(obj.has_sd);
             // cache the value of the has_sd for use in
             // value_list fillTables() method.

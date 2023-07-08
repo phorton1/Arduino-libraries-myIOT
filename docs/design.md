@@ -301,6 +301,8 @@ are common to all **myIOT** devices *as of this writing*.
    <br><i>Readonly</i></td></tr>
 <tr><td valign='top'><b>DEVICE_UUID</b></td><td valign='top'>STRING</td><td valign='top'>A <b>unique identifier</b> for this device.  The last 12 characters of this are the <i>MAC Address</i> of the device
    <br><i>Readonly</i></td></tr>
+<tr><td valign='top'><b>DEVICE_URL</b></td><td valign='top'>STRING</td><td valign='top'>The <b>url</b> of a webpage for this device.
+   <br><i>Readonly</i></td></tr>
 <tr><td valign='top'><b>DEVICE_IP</b></td><td valign='top'>STRING</td><td valign='top'>The most recent Wifi <b>IP address</b> of the device. Assigned by the WiFi router in <i>Station mode</i> or hard-wired in <i>Access Point</i> mode.
    <br><i>Readonly</i></td></tr>
 <tr><td valign='top'><b>DEVICE_BOOTING</b></td><td valign='top'>BOOL</td><td valign='top'>A value that indicates that the device is in the process of <b>rebooting</b>

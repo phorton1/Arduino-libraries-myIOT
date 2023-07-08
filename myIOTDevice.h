@@ -12,6 +12,7 @@
 #define IOT_DEVICE          "myIOTDevice"
 #define IOT_DEVICE_VERSION  "iot1.00"
 
+#define DEFAULT_DEVICE_URL  "https://github.com/phorton1-Arduino-libraries-myIOT"
 #define DEFAULT_AP_PASSWORD   "11111111"
 
 
@@ -30,6 +31,7 @@
 #define ID_DEVICE_TYPE    "DEVICE_TYPE"
 #define ID_DEVICE_VERSION "DEVICE_VERSION"
 #define ID_DEVICE_UUID    "DEVICE_UUID"
+#define ID_DEVICE_URL     "DEVICE_URL"
 #define ID_DEVICE_IP      "DEVICE_IP"
 #define ID_DEVICE_BOOTING "DEVICE_BOOTING"
 
@@ -106,6 +108,8 @@ class myIOTDevice
             { _device_type = device_type; }
         static void setDeviceVersion(const char *device_version)
             { _device_version = String(device_version) + String(" ") + String(IOT_DEVICE_VERSION); }
+        static void setDeviceUrl(const char *device_url)
+            { _device_url = device_url; }
 
         // likewise, the SD card is started early by the INO program
         // for logging to the logfile
@@ -135,6 +139,10 @@ class myIOTDevice
             // This is used as the "Model Number" in SSDP, and also shows up in the
             // SSDP broadcast messages.  Note that the myIOTDevice layer knows the
             // constant IOT_DEVICE_VERSION and can report both of them.
+
+        static const char *getDeviceUrl()   { return _device_url.c_str(); }
+            // also optionally set by derived class
+
 
         String getName()   { return getString(ID_DEVICE_NAME);  }
             // This is a user-defined name for the device, and can be anything.
@@ -287,6 +295,7 @@ class myIOTDevice
         static String _device_uuid;
         static String _device_type;
         static String _device_version;
+        static String _device_url;
         static String _device_ip;
         static bool   _device_ssdp;
 

@@ -335,9 +335,9 @@ void myIOTHTTP::handle_SSDP()
             "<serialNumber>%s</serialNumber>"
             "<modelName>%s</modelName>"                 // whereas this agrees with the Server and is OUR device type name
             "<modelNumber>%s</modelNumber>"
-            "<modelURL>https://github.com/phorton1</modelURL>"
+            "<modelURL>%s</modelURL>"
             "<manufacturer>prhSystems</manufacturer>"
-            "<manufacturerURL>http://phorton.com</manufacturerURL>"
+            "<manufacturerURL>https://github.com/phorton1/Arduino-libraries-myIOT</manufacturerURL>"
             "<UDN>uuid:%s</UDN>"
             "</device>"
             "</root>\r\n"
@@ -349,8 +349,9 @@ void myIOTHTTP::handle_SSDP()
             my_iot_device->getName().c_str(),                       // friendlyName
             String((uint16_t)(ESP.getEfuseMac() >> 32)).c_str(),    // serial number
             my_iot_device->getDeviceType(),                         // Model name
-            myIOTDevice::getVersion(),                            // Model number
-            my_iot_device->getUUID().c_str());                        // uuid
+            myIOTDevice::getVersion(),                              // Model number
+            myIOTDevice::getDeviceUrl(),                            // Device Url
+            my_iot_device->getUUID().c_str());                      // uuid
 
         web_server.send(200, "text/xml", (String)sschema);
     }

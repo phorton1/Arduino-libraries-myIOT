@@ -275,6 +275,7 @@ String myIOTWebSockets::deviceInfoJson()
     doc["uuid"] = my_iot_device->getUUID();
     doc["device_type"] = my_iot_device->getDeviceType();
     doc["device_name"] = my_iot_device->getName();
+    doc["device_url"] = my_iot_device->getDeviceUrl();
     doc["version"] = myIOTDevice::getVersion();
     doc["iot_version"] = IOT_DEVICE_VERSION;
     doc["uptime"] = millis()/1000;
