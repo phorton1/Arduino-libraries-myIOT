@@ -51,7 +51,9 @@ for understanding more about how to use it.  Please see the
 following repositories for more information:
 
 - **[bilgeAlarm](https://github.com/phorton1/Arduino-bilgeAlarm)** - a device to monitor and control two bilge pumps on a sailboat that includes a car alarm if things go wrong
-- **[theClock](https://github.com/phorton1/Arduino-theClock)** - a laser cut, wooden gear clock with a magnetic pendulum controlled by an ESP32
+- **[theClock](https://github.com/phorton1/Arduino-theClock)** - my original laser cut wooden gear clock with a magnetic pendulum
+- **[theClock3](https://github.com/phorton1/Arduino-theClock3)** - a *better*, **more accurate** electromagnetic wooden geared clock
+
 
 ## License
 
