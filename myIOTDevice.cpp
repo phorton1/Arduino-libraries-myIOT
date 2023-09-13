@@ -2,7 +2,6 @@
 // myIOTDevice.cpp
 //--------------------------
 
-
 #include "myIOTDevice.h"
 #include "myIOTLog.h"
 #include "myIOTSerial.h"
@@ -691,18 +690,19 @@ void myIOTDevice::showValues()
         {
             String val = value->getAsString();
             Serial.printf("%-15s = ",value->getId());
-            Serial.println(val);
+            Serial.print(val);
+            Serial.print("\r\n");
 
-        #if WITH_TELNET
-			if (myIOTSerial::telnetConnected())
-            {
-                static char tel_buf[80];
-                sprintf(tel_buf,"%-15s = ",value->getId());
-				myIOTSerial::telnet.print(tel_buf);
-				myIOTSerial::telnet.println(val);
-            }
-		#endif
-
+            #if WITH_TELNET
+                if (myIOTSerial::telnetConnected())
+                {
+                    static char tel_buf[80];
+                    sprintf(tel_buf,"%-15s = ",value->getId());
+                    myIOTSerial::telnet.print(tel_buf);
+                    myIOTSerial::telnet.print(val);
+                    myIOTSerial::telnet.print("\r\n");
+                }
+            #endif
         }
     }
 }
@@ -940,11 +940,16 @@ void myIOTDevice::showAllParameters()
             rslt += "</td></tr>";
 
             // output the line
+            // THIS NO LONGER WORKS
 
-            Serial.println(rslt);
+            Serial.print(rslt);
+            Serial.print("\r\n");
             #if WITH_TELNET
-			if (myIOTSerial::telnetConnected())
-				myIOTSerial::telnet.println(rslt);
+                if (myIOTSerial::telnetConnected())
+                {
+                    myIOTSerial::telnet.print(rslt);
+                    myIOTSerial::telnet.print("\r\n");
+                }
             #endif
         }
     }

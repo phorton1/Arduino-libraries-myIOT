@@ -49,7 +49,8 @@ volatile int iot_proc_level = 0;
         iot_proc_level--;
         if (iot_proc_level < 0)
         {
-            Serial.println("=================> iot_proc_level<0");
+            Serial.print("=================> iot_proc_level<0");
+			Serial.print("\r\n");
             iot_proc_level = 0;
         }
     }
@@ -66,7 +67,7 @@ static int mycat(char *buf, const char *str, char **end)
 }
 
 
-void log_output(bool with_indent, int level, const char *format, va_list *var)
+static void log_output(bool with_indent, int level, const char *format, va_list *var)
 {
     if (iot_debug_level < level &&
 		(!myIOTDevice::hasSD() || iot_log_level < level))
@@ -196,7 +197,8 @@ void log_output(bool with_indent, int level, const char *format, va_list *var)
 			if (!file)
 			{
 				Serial.print("WARNING - COULD NOT OPEN LOGFILE ");
-				Serial.println(logfile_name);
+				Serial.print(logfile_name);
+				Serial.print("\r\n");
 				logfile_error = 1;
 			}
 			else
