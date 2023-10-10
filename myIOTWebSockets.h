@@ -5,13 +5,11 @@
 #pragma once
 
 #include "myIOTTypes.h"
-#include <WebSocketsServer.h>
-
 
 #if WITH_WS
 #define WS_TASK
 
-
+#include <WebSocketsServer.h>
 
 class myIOTWebSockets
 {
