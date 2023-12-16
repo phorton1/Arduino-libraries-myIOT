@@ -197,7 +197,7 @@ static const char *device_tooltips[] = {
     ID_UPTIME           ,   "LAST_BOOT value as integer seconds since Jan 1, 1970.  Displayed as he number of <i>hours, minutes, and seconds</i> since the device was last rebooted in the WebUI",
 
 #if WITH_AUTO_REBOOT
-    ID_AUTO_REBOOT      ,   "How often, in <b>seconds</b> to automatically <b>reboot the device</b>.",
+    ID_AUTO_REBOOT      ,   "How often, in <b>hours</b> to automatically <b>reboot the device</b>.",
 #endif
 
     ID_AP_PASS          ,   "The <i>encrypted</i> <b>Password</b> for the <i>Access Point</i> when in AP mode",
