@@ -21,6 +21,12 @@ if you pass --recursive on the command line:
 
 	git clone --recursive https://github.com/phorton1/junk-test_repo2 some_other_name
 
-Before I do that, though, I wonder what it is like to clone a
-repo that has submodules.  Is there a command to automatically
-clone the submodules?
+Updating a repository that has submodules that are out of date, i.e.
+after committing and pushing the /junk/test_repo1/test_sub1 repo,
+the copy in test_repo2 can be updated by chdir /junk/test_repo2
+and running:
+
+	git submodule update --recursive --remote
+
+So far, so good, what about making changes that would need
+merging?
