@@ -447,6 +447,18 @@ void myIOTHTTP::handle_request()
     else if (path.startsWith("/spiffs/"))
         path.replace("/spiffs/","/");
 
+    // 2024-03-01 data directory as submodule
+    //
+    // The CSS and JS referenced from index.html are prefixed with
+    // /myIOT/ to allow the Perl myIOTServer to place the 'data'
+    // submodule in a different location in the folder tree than
+    // the default 'site' folder.
+    //
+    // On the ESP32 we merely remove the /myIOT/ and serve it
+    // from the '/' root of the flat SPIFFS
+
+    else if (path.startsWith("/myIOT/"))
+        path.replace("/myIOT/","/");
 
     debugRequest("handle_request");
 
