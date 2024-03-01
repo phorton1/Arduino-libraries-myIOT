@@ -1,0 +1,3 @@
+[submodule "examples/testDevice/data"]
+	path = examples/testDevice/data
+	url = https://github.com/phorton1/Arduino-libraries-myIOT-data
