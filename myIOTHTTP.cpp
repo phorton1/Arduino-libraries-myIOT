@@ -132,6 +132,8 @@ String myIOTHTTP::getContentType(String filename)
         return "application/x-gzip";
     } else if (file_name.endsWith(".txt")) {
         return "text/plain";
+    } else if (file_name.endsWith(".md")) {
+        return "text/plain";    // markdown";
     }
     return "application/octet-stream";
 }
