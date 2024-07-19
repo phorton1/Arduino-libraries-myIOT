@@ -171,6 +171,9 @@ typedef struct {
         } enum_range;
     };
 
+    const char *extra_classes;
+        // space delimited ?
+
 } valDescriptor;
 
 

@@ -184,6 +184,7 @@ class myIOTDevice
         myIOTValue *findValueById(valueIdType id);
         const iotValueList getValues()  { return m_values; }
         virtual void onValueChanged(const myIOTValue *value, valueStore from) {}
+        void    disableClass(const char *class_name, bool disabled);
 
         // WiFi (internal api)
 
@@ -292,6 +293,7 @@ class myIOTDevice
         // leading underscore indicates pointed to values
 
         iotValueList  m_values;
+        static String m_disabled_classes;
         static String _device_uuid;
         static String _device_type;
         static String _device_version;

@@ -58,11 +58,17 @@ volatile int iot_proc_level = 0;
 
 
 
-static int mycat(char *buf, const char *str, char **end)
+static int mycat(int avail, char *buf, const char *str, char **end)
 {
 	int len = strlen(str);
-	strcpy(buf,str);
-	*end = &buf[len];
+	if (len > avail)
+		len = avail;
+	if (len)
+	{
+		memcpy(buf,str,len);
+		*end = &buf[len];
+		**end = 0;
+	}
 	return len;
 }
 
@@ -82,10 +88,10 @@ static void log_output(bool with_indent, int level, const char *format, va_list 
 
 	#define MAX_BUFFER  255
 
-	int len = 0;
-	char display_buf[MAX_BUFFER+1];		// buffer including color sequence
-	char *log_buf = display_buf;		// after color sequence
-    char *end = display_buf;			// next position to write at
+	int avail = MAX_BUFFER;
+	char display_buf[MAX_BUFFER + 2 + 5 + 1];	// + crlf, color, null
+	char *log_buf = display_buf;				// after color sequence
+    char *end = display_buf;					// next position to write at
 
 
 	if (log_colors)
@@ -99,7 +105,8 @@ static void log_output(bool with_indent, int level, const char *format, va_list 
 			case LOG_LEVEL_DEBUG   : color = MSG_COLOR_GREEN; break;
 			case LOG_LEVEL_VERBOSE : color = MSG_COLOR_MAGENTA; break;
 		}
-		mycat(display_buf,color,&log_buf);
+		avail -= mycat(avail,display_buf,color,&end);
+		log_buf = end;
 	}
 
 	if (log_date || log_time)
@@ -124,21 +131,25 @@ static void log_output(bool with_indent, int level, const char *format, va_list 
 			tm = tm.substring(12);
 		else if (!log_time)
 			tm = tm.substring(0,12);
-		mycat(log_buf,tm.c_str(),&end);
+		avail -= mycat(avail,end,tm.c_str(),&end);
 	}
 
 	if (log_mem)
 	{
 		uint32_t mem_free = xPortGetFreeHeapSize() / 1024;
 		uint32_t mem_min = xPortGetMinimumEverFreeHeapSize() / 1024;
-		len = mycat(end,String(mem_free).c_str(),&end);
-		len += mycat(end,":",&end);
-		len += mycat(end,String(mem_min).c_str(),&end);
+
+		int len = mycat(avail,end,String(mem_free).c_str(),&end);
+		len += mycat(avail,end,":",&end);
+		len += mycat(avail,end,String(mem_min).c_str(),&end);
+
 		while (len < 10)
 		{
-			strcpy(end++," ");
+			*end++ = ' ';
 			len++;
 		}
+		avail -= 10;
+		*end = 0;
 	}
 
 	// Serial.println(display_buf);
@@ -155,17 +166,15 @@ static void log_output(bool with_indent, int level, const char *format, va_list 
 		while (use_level > 8)
 			use_level -= 8;
         for (int i=0; i<use_level; i++)
-			mycat(end,"    ",&end);
+			avail -= mycat(avail,end,"    ",&end);
 	}
 
 	// add the final formatted string
+	// no longer using 'avail'
 
-	len = strlen(display_buf);
-	int avail = MAX_BUFFER - len - 2 - 5 - 1;
-		// 2 for \r\n,  5 for trailing color string, 1 for 0 terminator
 	vsnprintf(end,avail,format,*var);
-	len = strlen(display_buf);
-	end = &display_buf[len];
+	int len = strlen(end);
+	end = &end[len];
 	strcpy(end,"\r\n");
 	end++;
 	end++;

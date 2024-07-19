@@ -263,6 +263,8 @@ RTC_NOINIT_ATTR int myIOTDevice::m_boot_count;
 valueIdType *myIOTDevice::m_dash_items = NULL;
 valueIdType *myIOTDevice::m_config_items = NULL;
 valueIdType *myIOTDevice::m_device_items = device_items;
+String      myIOTDevice::m_disabled_classes = "";
+
 
 const char  **g_derived_tooltips = NULL;
 const char  **g_extra_text = NULL;
@@ -962,6 +964,63 @@ void myIOTDevice::showAllParameters()
 // valueListJson()
 //-----------------------------
 
+void myIOTDevice::disableClass(const char *class_name, bool disabled)
+{
+    bool send_it = 0;
+    LOGD("disableClass(%s,%d)",class_name,disabled);
+    String id = String(".") + String(class_name);
+    int idx = m_disabled_classes.indexOf(id);
+    bool exists = idx != -1;
+    if (disabled)
+    {
+        if (!exists)
+        {
+            if (m_disabled_classes.length())
+                m_disabled_classes += String(",");
+            m_disabled_classes += id;
+            send_it = 1;
+            LOGD("DISABLED(%s) = %s",class_name,m_disabled_classes.c_str());
+        }
+    }
+    else if (exists)
+    {
+        int remove_len = id.length();
+        int s_len = m_disabled_classes.length();
+        if (s_len == remove_len)    // no commas
+        {
+            m_disabled_classes = "";
+            remove_len = 0;
+        }
+        else if (idx > 0)           // remove leading comma
+        {
+            remove_len++;
+            idx--;
+        }
+        else                        // remove trailng comma on 0th item
+        {
+            remove_len++;
+        }
+
+        if (remove_len)
+        {
+            m_disabled_classes.remove(idx,remove_len);
+        }
+
+        send_it = 1;
+        LOGD("ENABLED(%s) = %s",class_name,m_disabled_classes.c_str());
+    }
+
+    #if WITH_WS
+        if (send_it)
+        {
+            String json = String("{\"disabled_classes\":\"") + m_disabled_classes + "\"}";
+            wsBroadcast(json.c_str());
+        }
+    #endif
+}
+
+
+
 #if WITH_WS
 
 
@@ -1047,6 +1106,7 @@ void myIOTDevice::showAllParameters()
         rslt += addIdList("dash_items",m_dash_items);
         rslt += addIdList("config_items",m_config_items);
         rslt += addIdList("device_items",m_device_items);
+        rslt += ",\n\"disabled_classes:\":\"" + m_disabled_classes + "\"\n";
 
         addToolTips(rslt);
 

@@ -857,6 +857,7 @@ void myIOTValue::publish(String val, valueStore from /*=VALUE_STORE_PROG*/)
         rslt += nameValuePair(true,"id",String(m_desc->id));
         rslt += nameValuePair(true,"type",String(type));
         rslt += nameValuePair(false,"store",String(m_desc->store));
+        rslt += nameValuePair(true,"css",String(m_desc->extra_classes));
         rslt += nameValuePair(false,"style",String(m_desc->style),has_range || has_value);
 
         if (type == VALUE_TYPE_INT)
