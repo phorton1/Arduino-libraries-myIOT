@@ -498,7 +498,9 @@ void myIOTHTTP::handle_request()
     else if (path.startsWith("/custom/"))
     {
         path.replace("/custom/","");
-        String text = my_iot_device->onCustomLink(path);
+        const char *mime_type = "text/html";
+
+        String text = my_iot_device->onCustomLink(path,&mime_type);
         if (text == "")
         {
             LOGE("custom link(%s) not found",path.c_str());
@@ -506,7 +508,7 @@ void myIOTHTTP::handle_request()
         }
         else
         {
-            web_server.send(200, "text/html", text.c_str());
+            web_server.send(200, mime_type, text.c_str());
         }
         return;
     }

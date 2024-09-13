@@ -231,10 +231,13 @@ class myIOTDevice
 
         // miscellaneous called internally, virtualized methods for derived class
 
-        virtual String onCustomLink(const String &path) { return ""; }
-            // on a hit to /custom/blah, this will call the derived class with "blah"
-            // and they can return an html page ... if they return "", the server
-            // will return 404 not found.
+        virtual String onCustomLink(const String &path, const char **mime_type) { return ""; }
+            // Web requests to /custom/blah will call this with path='blah'
+            // and the address of a pointer to a const char * mime_type.
+            // The default mime_type is "text/html".
+            // Client may return a String that will be sent with a HTTP 200 success code,
+            // and may determine the mime_type by setting *mime_type to a different pointer.
+            // If an empty string is returned, the server will return a 404 not found.
         virtual void showIncSetupProgress() {}
             // called three times by Setup()
 
