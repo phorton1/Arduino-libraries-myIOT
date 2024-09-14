@@ -14,7 +14,9 @@
 #include <SD.h>
 #include <SPIFFS.h>
 #include <DNSServer.h>
-#include <ESP32SSDP.h>
+#if WITH_SSDP
+    #include <ESP32SSDP.h>
+#endif
 #include <StreamString.h>
 #include <ArduinoJson.h>
 #include <Update.h>
@@ -192,42 +194,43 @@ void myIOTHTTP::onConnectStation()
 
     // changes to the _device_ssdp boolean require a reboot
 
-    if (my_iot_device->getBool(ID_SSDP))
-    {
-        LOGI("Starting SSDP");
-        SSDP.end();
-        SSDP.setSchemaURL("description.xml");
-        SSDP.setHTTPPort(MY_HTTP_PORT);
-        SSDP.setURL("/");
+    #if WITH_SSDP
+        if (my_iot_device->getBool(ID_SSDP))
+        {
+            LOGI("Starting SSDP");
+            SSDP.end();
+            SSDP.setSchemaURL("description.xml");
+            SSDP.setHTTPPort(MY_HTTP_PORT);
+            SSDP.setURL("/");
 
-        // The "device type" as far as SSDP is concerned is
-        // "urn:myIOTDevice" for all of myIOTDevices.
-        // The "urn:" may not be necessary.
+            // The "device type" as far as SSDP is concerned is
+            // "urn:myIOTDevice" for all of myIOTDevices.
+            // The "urn:" may not be necessary.
 
-        SSDP.setDeviceType("urn:myIOTDevice");
+            SSDP.setDeviceType("urn:myIOTDevice");
 
-        // On the other hand, we encode our "device type" (i.e. "bilgeAlarm")
-        // into the SSDP Server Name field, so that my cilents (myIOTServer)
-        // can tell the type of the device without getting the description.xml.
+            // On the other hand, we encode our "device type" (i.e. "bilgeAlarm")
+            // into the SSDP Server Name field, so that my cilents (myIOTServer)
+            // can tell the type of the device without getting the description.xml.
 
-        SSDP.setServerName("myIOTDevice");
-        SSDP.setModelName(my_iot_device->getDeviceType());
-        SSDP.setModelNumber(myIOTDevice::getVersion());
+            SSDP.setServerName("myIOTDevice");
+            SSDP.setModelName(my_iot_device->getDeviceType());
+            SSDP.setModelNumber(myIOTDevice::getVersion());
 
-        LOGD("SSDP Server=%s UUID=%s",my_iot_device->getDeviceType(),my_iot_device->getUUID().c_str());
+            LOGD("SSDP Server=%s UUID=%s",my_iot_device->getDeviceType(),my_iot_device->getUUID().c_str());
 
-        SSDP.setUUID(my_iot_device->getUUID().c_str(),false);
-            // the false is important, the default parameter (rootonly) is true
-            // in which case luc's library will ALSO concatenate the MAC bytes.
-            // Since he has no accessor, and I need it in the XML below, I
-            // have my own version of getUniqueId().
+            SSDP.setUUID(my_iot_device->getUUID().c_str(),false);
+                // the false is important, the default parameter (rootonly) is true
+                // in which case luc's library will ALSO concatenate the MAC bytes.
+                // Since he has no accessor, and I need it in the XML below, I
+                // have my own version of getUniqueId().
 
-        SSDP.setName(my_iot_device->getName().c_str());
-            // This is the "friendly name" in the SSDP xml
+            SSDP.setName(my_iot_device->getName().c_str());
+                // This is the "friendly name" in the SSDP xml
 
-        SSDP.begin();
-    }
-
+            SSDP.begin();
+        }
+    #endif  // WITH_SSDP
 
     #if WITH_NTP
 

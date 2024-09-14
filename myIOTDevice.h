@@ -10,8 +10,9 @@
 
 
 #define IOT_DEVICE          "myIOTDevice"
-#define IOT_DEVICE_VERSION  "iot1.00"
-
+#define IOT_DEVICE_VERSION  ("iot1.10e" MY_IOT_ESP32_CORE_STR)
+    // note that the version has MY_IOT_ESP32_CORE (1 or 3) appended after an "e"
+    
 #define DEFAULT_DEVICE_URL  "https://github.com/phorton1-Arduino-libraries-myIOT"
 #define DEFAULT_AP_PASSWORD   "11111111"
 

@@ -55,10 +55,13 @@ for your initial installation.
 Depending on the settings of the defines in **myIOTTypes.h**, various additional libraries **MUST BE INSTALLED**
 into your Arduino IDE development environment.
 
-- **WebSockets** by Markus Sattler - Version 2.3.6 (if **WITH_WS == 1**)
-- **ArduinoJson** by Benoit Blanchon - Verson 6.18.5 (if **WITH_WS == 1**)
-- **PubSubClient** by Nick O'Leary - Version 2.8.0 (if **WITH_MQTT == 1**)
-- **ESP Telnet** by Lennart Hennings - Version 1.2.2 (if **WITH_TELNET == 1**)
+- **[ESP32SSDP](https://github.com/phorton1/Arduino-libraries-ESP32SSDP)** - my fork of
+	https://github.com/luc-github/ESP32SSDP
+- **WebSockets** by Markus Sattler - Version 2.3.6 (if **WITH_WS == 1** default!)
+- **ArduinoJson** by Benoit Blanchon - Verson 6.18.5 (if **WITH_WS == 1** default!)
+- **PubSubClient** by Nick O'Leary - Version 2.8.0 (if **WITH_MQTT == 1**  by default MQTT is not included)
+- **ESP Telnet** by Lennart Hennings - Version 1.2.2 (if **WITH_TELNET == 1** default)
+
 
 So, in order to build the included **testDevice.ino** example program with the default defines,
 you **MUST** install the **Websockets and ArduinoJson** libraries into your Arduino IDE environment.

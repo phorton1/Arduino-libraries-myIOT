@@ -7,7 +7,66 @@
 #include <Arduino.h>
 #include <WiFi.h>
 
+//----------------------------------------------------------------
+// ESP32 Core Vesioning
+//----------------------------------------------------------------
+// Define MY_IOT_ESP32_CORE as 1 or 3
+//
+// In experiments to update Arduino IDE 1.18.3 from ESP32 Core 1.0.6
+// to 3.0.4 I needed to include <core_version.h> to get defines.
+//
+//      #define ARDUINO_ESP32_GIT_VER 0x46d5afb1
+//      #define ARDUINO_ESP32_GIT_DESC 1.0.6
+//      #define ARDUINO_ESP32_RELEASE_1_0_6
+//      #define ARDUINO_ESP32_RELEASE "1_0_6"
+//
+// and
+//
+//      #define ARDUINO_ESP32_GIT_VER 0x1a42b87f
+//      #define ARDUINO_ESP32_GIT_DESC 3.0.4
+//      #define ARDUINO_ESP32_RELEASE_3_0_4
+//      #define ARDUINO_ESP32_RELEASE "3_0_4"
+//
+// To handle several problems that arose:
+//
+//      wifiEventHandler.cpp - constants changed names and need include files
+//
+// There are also changes in ESP32SSDP for similar reasons.
+//
+// I don't know when specific changes became necessary, and,
+// can't compare strings or dotted numbers, and git versions
+// are unordered uuid's, so, unfortunately I have to test against
+// specific version and assume if it's not my old version, it
+// must be my new version.  If I had maintained ESP32SSDP through
+// every ESP32 Core release version, I could have a complicated,
+// but more complete solution.
+//
+// In any case, here we define the MY_IOT_ESP32_CORE version number (1 or 3)
+// and it may be used in myIOT or any myIOT things.
 
+#include <core_version.h>
+// #pragma message( "ESP32 Core Version " ARDUINO_ESP32_RELEASE) )
+#ifdef ARDUINO_ESP32_RELEASE_1_0_6
+    #define MY_IOT_ESP32_CORE         1
+    #define MY_IOT_ESP32_CORE_STR     "1"
+#else
+    #define MY_IOT_ESP32_CORE         3
+    #define MY_IOT_ESP32_CORE_STR     "3"
+#endif
+
+// There's also this stuff, but I prefer the 3_0_4 (what you get from
+// the Arduino Board Manager, rather than the Esperiff IDF version:
+//
+//      #include <esp_idf_version.h>
+//      #define STRINGIFY(n)    STRINGIT(n)
+//      #define STRINGIT(n)     #n
+//      #pragma message("ESP_IDF_VERSION " STRINGIFY(ESP_IDF_VERSION))
+//      #pragma message("MAJOR " STRINGIFY(ESP_IDF_VERSION_MAJOR) " MINOR " STRINGIFYESP_IDF_VERSION_MINOR) " PATCH " STRINGIFY(ESP_IDF_VERSION_PATCH) )
+
+
+//----------------------------------------------------------------
+// back to sanity
+//----------------------------------------------------------------
 
 #define DEBUG_PASSWORDS  0
 
@@ -17,6 +76,9 @@
 // default settings are for my generic IOT device (bilgeAlarm)
 // I can modify this at compile time via /base/bat/setup_platform.pm
 
+#ifndef WITH_SSDP
+    #define WITH_SSDP   1
+#endif
 
 #ifndef WITH_WS
     #define WITH_WS     1
