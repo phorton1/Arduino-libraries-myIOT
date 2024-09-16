@@ -128,6 +128,7 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
         m_connect_status &= ~IOT_CONNECT_STA;
         if (mode != WIFI_AP_STA)
         {
+            LOGD("setting WiFi.mode(WIFI_STA)");
             WiFi.mode(WIFI_STA);
                 // Weird - this changes a variable called "g_log_level"
             delay(400);
@@ -200,6 +201,7 @@ void myIOTWifi::connect(const String &sta_ssid/*=String()*/, const String &sta_p
     if (!(m_connect_status & IOT_CONNECT_STA))
     //  && !(m_connect_status & IOT_CONNECT_AP))
     {
+        LOGD("setting WiFi.mode(WIFI_AP_STA)");
         WiFi.mode(WIFI_AP_STA);     // default mode == both on
         delay(400);
 
