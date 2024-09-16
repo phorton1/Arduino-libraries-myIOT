@@ -8,8 +8,8 @@
 	#define MYIOT_STA_CONNECTED 	SYSTEM_EVENT_AP_STACONNECTED
 	#define MYIOT_STA_DISCONNECTED 	SYSTEM_EVENT_AP_STADISCONNECTED
 #else
-	#define MYIOT_STA_CONNECTED 	ARDUINO_EVENT_WIFI_STA_CONNECTED
-	#define MYIOT_STA_DISCONNECTED 	ARDUINO_EVENT_WIFI_STA_DISCONNECTED
+	#define MYIOT_STA_CONNECTED 	ARDUINO_EVENT_WIFI_AP_STACONNECTED
+	#define MYIOT_STA_DISCONNECTED 	ARDUINO_EVENT_WIFI_AP_STADISCONNECTED
 #endif
 
 
@@ -150,8 +150,11 @@ static void onWiFiEvent(WiFiEvent_t event)
 	}
 	else if (event == MYIOT_STA_DISCONNECTED)
 	{
-		ap_connection_count --;
-		LOGI("ap_connection_count=%d",ap_connection_count);
+		if (ap_connection_count)
+		{
+			ap_connection_count --;
+			LOGI("ap_connection_count=%d",ap_connection_count);
+		}
 	}
 }
 
