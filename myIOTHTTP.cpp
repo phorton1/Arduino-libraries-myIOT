@@ -9,7 +9,7 @@
 #include "myIOTDevice.h"
 #include "myIOTWifi.h"     // for suppressAutoConnectSTA()
 #include "myIOTLog.h"
-#include <WebServer.h>
+#include "myIOTWebServer.h"
 
 #include <SD.h>
 #include <SPIFFS.h>
@@ -50,7 +50,7 @@ static const char PAGE_404[] =
         "\n{\nclearInterval(interval);\nwindow.location.href='http://$AP_ADDRESS$/captive';\n}\n},1000);\n</script>\n</CENTER>\n</BODY>\n</HTML>\n\n";
 #endif
 
-WebServer web_server(MY_HTTP_PORT);
+myIOTWebServer web_server(MY_HTTP_PORT);
 DNSServer dns_server;
 
 int myIOTHTTP::m_upload_pct = 0;
@@ -509,7 +509,7 @@ void myIOTHTTP::handle_request()
             LOGE("custom link(%s) not found",path.c_str());
             web_server.send(404, "text/html", doReplacements(PAGE_404));
         }
-        else
+        else if (text != RESPONSE_HANDLED)
         {
             web_server.send(200, mime_type, text.c_str());
         }
