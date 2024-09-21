@@ -9,7 +9,7 @@
 #include <myIOTTypes.h>
 
 #if !WITH_SD
-	#message("dataLog requires myIOT define WITH_SD=1")
+	#pragma message("dataLog requires myIOT define WITH_SD=1")
 #else
 
 // The rest of this file
