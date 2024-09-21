@@ -444,13 +444,29 @@ void myIOTHTTP::handle_request()
 {
     String path = web_server.urlDecode(web_server.uri());
 
+    bool is_myiot_request = 0;
+        // request uses fake /myIOT/ prefix which means that the file is
+        // denormalized as the 'data' common submodule and (1) uploaded to the
+        // local ESP32's spiffs file system at /, or (2) in the myIOTServer's
+        // myIOT directory, which is likewise a clone of the the common 'data'
+        // submodule
+    bool is_extra_spiffs = 0;
+        // request uses fake /spiffs/ prefix which, in the myIOTServer, indicates
+        // that it should be served from the given ESP32's spiffs file system, given
+        // a UUID parameter.
+
+
     if (path == "/")
     {
         // LOGD("changing path to index.html");
         path = "/index.html";
     }
     else if (path.startsWith("/spiffs/"))
+    {
         path.replace("/spiffs/","/");
+        is_extra_spiffs = 1;
+    }
+    
 
     // 2024-03-01 data directory as submodule
     //
@@ -463,7 +479,10 @@ void myIOTHTTP::handle_request()
     // from the '/' root of the flat SPIFFS
 
     else if (path.startsWith("/myIOT/"))
+    {
         path.replace("/myIOT/","/");
+        is_myiot_request = 1;
+    }
 
     debugRequest("handle_request");
 
@@ -541,12 +560,37 @@ void myIOTHTTP::handle_request()
     {
         LOGI("serving SPIFFS file: %s",path.c_str());
         File file = SPIFFS.open(path, FILE_READ);
-        if (file)
-        {
-            web_server.streamFile(file, getContentType(path));
-            file.close();
-            return;
-        }
+
+        #if 0   // EXPERIMENTAL TOKEN SUBSTITUTION RAW RESPONSE HANDLING
+            // the file exists in the local SPIFFS file system,
+            // and 'is_myiot_request' or 'is_extra_spiffs" *may* true.
+            //
+            // In any case, we'd like to check for a 'cache=1' request
+            // parameter and stick a cache control header into the reply
+            // if it is found, but the sync ESP32 WebServer doesn't make
+            // that easy.
+            //
+            // Worse yet, for the myIOTServer, we need, to massage the files
+            // like the initial html for 'temp_chart.html', which we
+            // are currently sending through this mechanism, to replace %%UUID%%
+            // with the current devices UUID so it can make device specific requests.
+            //
+            // One dilemma at a time.
+            
+            String response = String(F("HTTP/1.1")) + String(_currentVersion) + ' ';
+    response += String(code);
+    response += ' ';
+    response += _responseCodeToString(code);
+    response += "\r\n";
+
+        #else   // PREVIOUS WORKING CODE
+            if (file)
+            {
+                web_server.streamFile(file, getContentType(path));
+                file.close();
+                return;
+            }
+        #endif
     }
 
     LOGE("page not found: %s",path.c_str());
