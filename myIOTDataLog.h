@@ -70,8 +70,31 @@ public:
 		// BEFORE it calls myIOTDevice::loop() so that sendChartData()
 		// works entire from the SD card.
 
-	// myIOTWebServer interface
-	// Called from the myIOTDevice's onCustomLink()
+
+	//----------------------------------------
+	// chart support
+	//----------------------------------------
+	// data_log.m_name = fridgeData
+	// produces
+	//		<div id='fridgeData'>
+	//			<div id='fridgetData_chart'></div>
+	//			<button id=fridgeData_plot_button'>PLOT</button>
+	//			<select id=fridgeData_period_select'>
+	//			<input type='number' id='fridgeData_refresh_interval'>
+	// uses urls that must be handled by client
+	// by calling getChartHeader() and sendChartData(), below
+	//		/custom/chart_header/frigeData and
+	//		/custom/chart_data/fridgeData?secs=NNN
+	//			client is only one who knows how to change
+	//			seconds into #records at this time
+	// because the base myIOTDevice does not keep track of
+	// dataLoggers.  They are instantiated purely by derived devices.
+	
+	String getChartHTML(
+		int height,
+		int width,
+		int period,
+		int refresh);
 
 	String getChartHeader();
 		// returns a String containing the json used to create a chart
@@ -103,8 +126,8 @@ private:
 	String dataFilename();
 	bool writeSDRecs(File &file, const char *what, int at, int num_recs);
 
-
 };
+
 
 
 #endif	// !WITH_SD

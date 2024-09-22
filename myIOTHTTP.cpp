@@ -558,39 +558,20 @@ void myIOTHTTP::handle_request()
 
     else if (SPIFFS.exists(path))
     {
-        LOGI("serving SPIFFS file: %s",path.c_str());
+        String cache_arg = myiot_web_server->arg("cache");
+        LOGI("serving SPIFFS file: %s  cache=%s",path.c_str(),cache_arg.c_str());
         File file = SPIFFS.open(path, FILE_READ);
-
-        #if 0   // EXPERIMENTAL TOKEN SUBSTITUTION RAW RESPONSE HANDLING
-            // the file exists in the local SPIFFS file system,
-            // and 'is_myiot_request' or 'is_extra_spiffs" *may* true.
-            //
-            // In any case, we'd like to check for a 'cache=1' request
-            // parameter and stick a cache control header into the reply
-            // if it is found, but the sync ESP32 WebServer doesn't make
-            // that easy.
-            //
-            // Worse yet, for the myIOTServer, we need, to massage the files
-            // like the initial html for 'temp_chart.html', which we
-            // are currently sending through this mechanism, to replace %%UUID%%
-            // with the current devices UUID so it can make device specific requests.
-            //
-            // One dilemma at a time.
+        if (file)
+        {
+            #if 1
+                if (cache_arg.equals("1"))
+                    web_server.sendHeader("Cache-Control","max-age=31536000, immutable",false);
+            #endif
             
-            String response = String(F("HTTP/1.1")) + String(_currentVersion) + ' ';
-    response += String(code);
-    response += ' ';
-    response += _responseCodeToString(code);
-    response += "\r\n";
-
-        #else   // PREVIOUS WORKING CODE
-            if (file)
-            {
-                web_server.streamFile(file, getContentType(path));
-                file.close();
-                return;
-            }
-        #endif
+            web_server.streamFile(file, getContentType(path));
+            file.close();
+            return;
+        }
     }
 
     LOGE("page not found: %s",path.c_str());

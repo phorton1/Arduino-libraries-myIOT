@@ -94,6 +94,14 @@ extern const char *tzString(IOT_TIMEZONE tz);
     // in myIOTHTTP.cpp
 
 
+typedef struct {
+    const char *name;               // every widget has a name
+    const char *dependencies;       // a comma delimited list of fully qualified CSS and JS filenames to load for the widget
+    const char *onActivate;         // a JS function to be called when the tab is activated
+    const char *onInactivate;         // a JS function to be called when the tab is activated
+    const String *html;                // the HTML for the widget
+}   myIOTWidget_t;
+
 
 class myIOTDevice
 {
@@ -111,8 +119,6 @@ class myIOTDevice
             { _device_version = String(device_version) + String(" ") + String(IOT_DEVICE_VERSION); }
         static void setDeviceUrl(const char *device_url)
             { _device_url = device_url; }
-        static void setDeviceWidget(const char *device_widget)
-            { _device_widget = device_widget; }
 
         // likewise, the SD card is started early by the INO program
         // for logging to the logfile
@@ -146,16 +152,21 @@ class myIOTDevice
         static const char *getDeviceUrl()   { return _device_url.c_str(); }
             // also optionally set by derived class
 
-        static const char *getDeviceWidget()   { return _device_widget.c_str(); }
-            // also optionally set by derived class
-
-
         String getName()   { return getString(ID_DEVICE_NAME);  }
             // This is a user-defined name for the device, and can be anything.
             // It is usually initialized to the same as getDeviceType() via value descriptors.
 
         static int getBootCount()      { return m_boot_count; }
             // stored in RTC memory, only valid for clients after setup()
+
+        // Widget
+
+
+        static void setDeviceWidget(const myIOTWidget_t *the_widget)
+            { _device_widget = the_widget; }
+
+        static const myIOTWidget_t *getDeviceWidget()   { return _device_widget; }
+            // also optionally set by derived class
 
         // Values
 
@@ -309,7 +320,8 @@ class myIOTDevice
         static String _device_url;
         static String _device_ip;
         static bool   _device_ssdp;
-        static String _device_widget;
+
+        static const myIOTWidget_t *_device_widget;
 
         #if WITH_NTP
             static IOT_TIMEZONE _device_tz;

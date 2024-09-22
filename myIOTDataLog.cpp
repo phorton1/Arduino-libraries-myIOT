@@ -303,7 +303,11 @@ String myIOTDataLog::getChartHeader()
 	rslt += "]\n";
 	rslt += "}";
 
-	// Serial.println(rslt.c_str());
+	#if 0
+		Serial.print("myIOTDataLog::getChartHeader()=");
+		Serial.println(rslt.c_str());
+	#endif
+	
 	return rslt;
 }
 
@@ -422,6 +426,120 @@ String myIOTDataLog::sendChartData(uint32_t num_recs)
 	// 	myiot_web_server->finishBinaryResponse();
 	return RESPONSE_HANDLED;
 }
+
+
+
+//-----------------------------
+// getChartHTML()
+//-----------------------------
+
+// data_log.m_name = fridgeData
+	// produces
+	//		<div id='fridgeData'>
+	//			<div id='fridgetData_chart'></div>
+	//			<button id=fridgeData_plot_button'>PLOT</button>
+	//			<select id=fridgeData_period_select'>
+	//			<input type='number' id='fridgeData_refresh_interval'>
+	// uses urls that must be handled by client
+	// by calling getChartHeader() and sendChartData(), below
+	//		/custom/chart_header/frigeData and
+	//		/custom/chart_data/fridgeData?secs=NNN
+	//			client is only one who knows how to change
+	//			seconds into #records at this time
+	// because the base myIOTDevice does not keep track of
+	// dataLoggers.  They are instantiated purely by derived devices.
+
+String addSelectOption(int default_value,int value, const char *name)
+{
+	String rslt = "<option value='";
+	rslt += String(value);
+	rslt += "'";
+	if (value == default_value)
+		rslt += " selected='selected'";
+	rslt += ">";
+	rslt += name;
+	rslt += "</option>\n";
+	return rslt;
+}
+	
+
+String myIOTDataLog::getChartHTML(
+	int height,
+	int width,
+	int period,
+	int refresh)
+{
+	LOGD("myIOTDataLog::getChartHTML(%d,%d,%d,%d)",height,width,period,refresh);
+
+	String rslt = "<div id='";
+	rslt += m_name;
+	rslt += "'>\n";
+
+	rslt += "<div id='";
+	rslt += m_name;
+	rslt += "_chart' style='height:";
+	rslt += String(height);
+	rslt += "px;width:";
+	rslt += String(width);
+	rslt += "px;'></div>\n";
+
+	rslt += "&nbsp;&nbsp;&nbsp;\n";
+
+	rslt += "<button id='";
+	rslt += m_name;
+	rslt += "_update_button";
+	rslt += "' onclick=\"doPlot('";
+	rslt += m_name;
+	rslt += "')\" disabled>Update</button>\n";
+
+	rslt += "&nbsp;&nbsp;&nbsp;\n";
+
+	rslt += "<label for='";
+	rslt += m_name;
+	rslt += "_chart_period'>Chart Period:</label>\n";
+	rslt += "<select name='period' id='";
+	rslt += m_name;
+	rslt += "_chart_period' onchange=\"get_chart_data('";
+	rslt += m_name;
+	rslt += "')\">\n";
+	rslt += addSelectOption(period,0,"All");
+	rslt += addSelectOption(period,60,"Minute");
+	rslt += addSelectOption(period,900,"15 Minutes");
+	rslt += addSelectOption(period,3600,"Hour");
+	rslt += addSelectOption(period,10800,"3 Hours");
+	rslt += addSelectOption(period,43200,"12 Hours");
+	rslt += addSelectOption(period,86400,"Day");
+	rslt += addSelectOption(period,172800,"2 Days");
+	rslt += addSelectOption(period,259200,"3 Days");
+	rslt += addSelectOption(period,604800,"Week");
+	rslt += addSelectOption(period,2592000,"Month");
+	rslt += addSelectOption(period,5184000,"2 Months");
+	rslt += addSelectOption(period,7776000,"3 Months");
+	rslt += addSelectOption(period,31536000,"Year");
+	rslt += "</select>\n";
+
+	rslt += "&nbsp;&nbsp;&nbsp;\n";
+
+	rslt += "<label for='";
+	rslt += m_name;
+	rslt += "_refresh_interval'>Refresh Interval:</label>\n";
+	rslt += "<input id='";
+	rslt += m_name;
+	rslt += "_refresh_interval' type='number' value='";
+	rslt += String(refresh);
+	rslt += "' min='0' max='999999'>\n";
+
+	rslt += "</div>\n";
+
+	#if 0
+		Serial.print("myIOTDataLog::getChartHTML()=");
+		Serial.println(rslt.c_str());
+	#endif
+	
+	return rslt;
+
+}
+
 
 
 

@@ -268,6 +268,19 @@ void myIOTWebSockets::onDeleteFile(int num, String filename)
 }
 
 
+// Custom serialization function for myIOTWidget_t
+void serializeWidget(JsonObject &json, const myIOTWidget_t &widget) {
+    json["name"] = widget.name;
+    json["dependencies"] = widget.dependencies;
+    json["onActivate"] = widget.onActivate;
+    json["onInactivate"] = widget.onInactivate;
+    json["html"] = widget.html ?
+        widget.html->c_str() : "";
+
+}
+
+
+
 String myIOTWebSockets::deviceInfoJson()
 {
     DynamicJsonDocument doc(1024);
@@ -276,7 +289,6 @@ String myIOTWebSockets::deviceInfoJson()
     doc["device_type"] = my_iot_device->getDeviceType();
     doc["device_name"] = my_iot_device->getName();
     doc["device_url"] = my_iot_device->getDeviceUrl();
-    doc["device_widget"] = my_iot_device->getDeviceWidget();
     doc["version"] = myIOTDevice::getVersion();
     doc["iot_version"] = IOT_DEVICE_VERSION;
     doc["uptime"] = millis()/1000;
@@ -289,6 +301,17 @@ String myIOTWebSockets::deviceInfoJson()
             "0";
         #endif
 
+    // widget
+
+    const myIOTWidget_t *widget = myIOTDevice::getDeviceWidget();
+    if (widget)
+    {
+        JsonObject widgetJson = doc.createNestedObject("device_widget");
+        serializeWidget(widgetJson, *widget);
+    }
+
+
+    // captive state
 
 #if DEBUG_CAPTIVE_WS
     // information added only for sake of debuging the captive Portal
@@ -323,6 +346,11 @@ String myIOTWebSockets::deviceInfoJson()
 
     String json_string;
     serializeJson(doc, json_string);
+
+    #if 0
+        Serial.print("myIOTWebSockets::deviceInfoJson()=");
+        Serial.println(json_string.c_str());
+    #endif
     return json_string;
 
 }

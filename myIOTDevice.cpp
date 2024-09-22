@@ -231,7 +231,8 @@ String myIOTDevice::_device_version = IOT_DEVICE_VERSION;
 String myIOTDevice::_device_url = DEFAULT_DEVICE_URL;
 bool myIOTDevice::_device_wifi = DEFAULT_DEVICE_WIFI;
 bool myIOTDevice::_device_ssdp = DEFAULT_DEVICE_SSDP;
-String myIOTDevice::_device_widget = "";
+const myIOTWidget_t *myIOTDevice::_device_widget = NULL;
+
 
 String myIOTDevice::_device_ip;
 
