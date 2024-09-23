@@ -488,7 +488,7 @@ String myIOTDataLog::getChartHTML(
 	rslt += "<button id='";
 	rslt += m_name;
 	rslt += "_update_button";
-	rslt += "' onclick=\"doPlot('";
+	rslt += "' onclick=\"doChart('";
 	rslt += m_name;
 	rslt += "')\" disabled>Update</button>\n";
 
