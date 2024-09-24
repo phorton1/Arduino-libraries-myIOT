@@ -301,7 +301,7 @@ String myIOTWebSockets::deviceInfoJson()
             "0";
         #endif
 
-    // widget
+    // widget & plot
 
     const myIOTWidget_t *widget = myIOTDevice::getDeviceWidget();
     if (widget)
@@ -309,7 +309,10 @@ String myIOTWebSockets::deviceInfoJson()
         JsonObject widgetJson = doc.createNestedObject("device_widget");
         serializeWidget(widgetJson, *widget);
     }
-
+    if (my_iot_device->hasPlot())
+    {
+        doc["has_plot"] = 1;
+    }
 
     // captive state
 

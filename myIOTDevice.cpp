@@ -148,6 +148,8 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_LOG_TIME,      VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_log_time,        NULL,   { .int_range = { DEFAULT_LOG_TIME }} },
     { ID_LOG_MEM,       VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_log_mem,         NULL,   { .int_range = { DEFAULT_LOG_MEM }} },
 
+    { ID_PLOT_DATA,     VALUE_TYPE_BOOL,       VALUE_STORE_PUB,       VALUE_STYLE_NONE,       (void *) &_plot_data,       NULL,   },
+
     { ID_WIFI,          VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_wifi,     (void *) onChangeWifi, { .int_range = { DEFAULT_DEVICE_WIFI }} },
     { ID_AP_PASS,       VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   DEFAULT_AP_PASSWORD },
     { ID_STA_SSID,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,   "" },
@@ -172,6 +174,9 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_MQTT_USER,     VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,   "myIOTClient" },
     { ID_MQTT_PASS,     VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   "1234" },
 #endif
+
+
+
 };
 
 #define NUM_BASE_VALUES (sizeof(m_base_descriptors)/sizeof(valDescriptor))
@@ -249,6 +254,8 @@ bool myIOTDevice::_log_colors = DEFAULT_LOG_COLORS;
 bool myIOTDevice::_log_date = DEFAULT_LOG_DATE;
 bool myIOTDevice::_log_time = DEFAULT_LOG_TIME;
 bool myIOTDevice::_log_mem = DEFAULT_LOG_MEM;
+bool myIOTDevice::_plot_data = 0;
+
 
 #if WITH_AUTO_REBOOT
     int myIOTDevice::_auto_reboot;

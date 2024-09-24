@@ -45,6 +45,9 @@
 #define ID_LOG_TIME       "LOG_TIME"
 #define ID_LOG_MEM        "LOG_MEM"
 
+// plotter
+
+#define ID_PLOT_DATA      "PLOT_DATA"
 
 // wifi stuff
 
@@ -159,15 +162,22 @@ class myIOTDevice
         static int getBootCount()      { return m_boot_count; }
             // stored in RTC memory, only valid for clients after setup()
 
-        // Widget
-
+        // Widget & Plot
 
         static void setDeviceWidget(const myIOTWidget_t *the_widget)
             { _device_widget = the_widget; }
-
         static const myIOTWidget_t *getDeviceWidget()   { return _device_widget; }
             // also optionally set by derived class
 
+        virtual bool hasPlot()    { return false; }
+            // optionally overriden by derived class
+        void sendPlot(int num, float *values);
+            // if there are WS sockets open, broadcast 'plot: N,N,N' WS
+            // messages to webUI clients
+        static bool   _plot_data;
+            // true if plotting should take place
+
+        
         // Values
 
         bool     getBool(valueIdType id);
