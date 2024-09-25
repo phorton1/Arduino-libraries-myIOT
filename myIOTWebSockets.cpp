@@ -312,6 +312,9 @@ String myIOTWebSockets::deviceInfoJson()
     if (my_iot_device->hasPlot())
     {
         doc["has_plot"] = 1;
+        const char *legend = myIOTDevice::getPlotLegend();
+        if (legend)
+            doc["plot_legend"] = legend;
     }
 
     // captive state

@@ -170,10 +170,25 @@ class myIOTDevice
             // also optionally set by derived class
 
         virtual bool hasPlot()    { return false; }
-            // optionally overriden by derived class
-        void sendPlot(int num, float *values);
-            // if there are WS sockets open, broadcast 'plot: N,N,N' WS
-            // messages to webUI clients
+            // optionally overriden by derived class,
+            // in which case when _plot_data is true,
+            // the client sends the json for an array
+            // of numbers as the "plot_data"
+        static void setPlotLegend(const char *comma_list);
+            // Called by the derived class to provide a list
+            // of field (column) names for the plot series.
+            // Does two things: immediately sends a WS broadcast
+            // to all connected webUI's with the list, and saves
+            // the list so that it will be sent with any device_info
+            // requests to new webUI's that come on line.
+            // In the former case, on broadcast, any existing plots
+            // will be restarted inasmuch as this implies that the
+            // semantics, as well as the number of columns, for the
+            // plot have changed.
+        static const char *getPlotLegend()  { return m_plot_legend; }
+            // called by myIOTWebSocket when sending device info,
+            // if returns non-null, will include a "plot_legend" member.
+
         static bool   _plot_data;
             // true if plotting should take place
 
@@ -332,6 +347,7 @@ class myIOTDevice
         static bool   _device_ssdp;
 
         static const myIOTWidget_t *_device_widget;
+        static const char *m_plot_legend;
 
         #if WITH_NTP
             static IOT_TIMEZONE _device_tz;

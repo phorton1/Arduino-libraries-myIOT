@@ -229,17 +229,17 @@ static const char *device_tooltips[] = {
 // vars
 //------------------------
 
-
 String myIOTDevice::_device_uuid;
 String myIOTDevice::_device_type = IOT_DEVICE;
 String myIOTDevice::_device_version = IOT_DEVICE_VERSION;
 String myIOTDevice::_device_url = DEFAULT_DEVICE_URL;
 bool myIOTDevice::_device_wifi = DEFAULT_DEVICE_WIFI;
 bool myIOTDevice::_device_ssdp = DEFAULT_DEVICE_SSDP;
-const myIOTWidget_t *myIOTDevice::_device_widget = NULL;
-
-
 String myIOTDevice::_device_ip;
+
+const myIOTWidget_t *myIOTDevice::_device_widget = NULL;
+const char *myIOTDevice::m_plot_legend = NULL;
+
 
 #if WITH_NTP
     IOT_TIMEZONE myIOTDevice::_device_tz;
@@ -1032,7 +1032,6 @@ void myIOTDevice::disableClass(const char *class_name, bool disabled)
 
 #if WITH_WS
 
-
     static void addToolTips(String &rslt)
     {
         rslt += ",\n";
@@ -1094,7 +1093,6 @@ void myIOTDevice::disableClass(const char *class_name, bool disabled)
         }
         return rslt;
     }
-
 
     String myIOTDevice::valueListJson()
     {
@@ -1203,7 +1201,26 @@ String myIOTDevice::handleCommand(const String &raw_command, valueStore from /*=
 
 
 
+//-----------------------------------------
+// plot support
+//-----------------------------------------
 
+// static
+void myIOTDevice::setPlotLegend(const char *comma_list)
+{
+    m_plot_legend = comma_list;
+    #if WITH_WS
+        String json = "{\"plot_legend\":\"";
+        json += comma_list;
+        json += "\"}";
+        my_iot_device->wsBroadcast(json.c_str());
+    #endif
+}
+
+
+//------------------------------------------
+// old misc
+//------------------------------------------
 
 // #define PIN_POWER_SENSE  25
 //
