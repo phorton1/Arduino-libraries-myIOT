@@ -95,6 +95,11 @@ myIOTDataLog::myIOTDataLog(
 
 bool myIOTDataLog::init(int num_mem_recs)
 {
+	if (m_num_cols > DATA_COLS_MAX)
+	{
+		LOGE("Illegal number of myIOTDataLog colums(%d) > %d",m_num_cols,DATA_COLS_MAX);
+		return false;
+	}
 	if (!my_iot_device->hasSD())
 	{
 		LOGE("No SD Card in myIOTDataLog::init()");
@@ -135,6 +140,32 @@ String myIOTDataLog::dataFilename()
 	filename += ".datalog";
 	return filename;
 }
+
+void myIOTDataLog::dbg_rec(logRecord_t rec)
+{
+	String tm = timeToString(*rec);
+	LOGD("   dt(%u) = %s",*rec++,tm.c_str());
+	for (int i=0; i<m_num_cols; i++)
+	{
+		uint32_t col_type = m_col[i].type;
+		if (col_type == LOG_COL_TYPE_FLOAT)
+		{
+			float float_val = *((float*)(rec++));
+			LOGD("   %-15s = %0.3f",m_col[i].name,float_val);
+		}
+		else if (col_type == LOG_COL_TYPE_INT32)
+		{
+			int32_t int32_val = *((int32_t*)(rec++));
+			LOGD("   %-15s = %d",m_col[i].name,int32_val);
+		}
+		else
+		{
+			LOGD("   %-15s = %d",m_col[i].name,*rec++);
+		}
+	}
+
+}
+
 
 
 bool myIOTDataLog::writeSDRecs(File &file, const char *what, int at, int num_recs)
@@ -200,11 +231,11 @@ bool myIOTDataLog::flushToSD()
 
 bool myIOTDataLog::addRecord(const logRecord_t in_rec)
 {
-	uint32_t now_gmt = time(NULL);
-	if (now_gmt < ILLEGAL_DT)
+	uint32_t now = time(NULL);
+	if (now < ILLEGAL_DT)
 	{
-		String local_s = timeToString(now_gmt);
-		LOGE("attempt to call myIOTDataLog::addRecord(%d) with bad time(%s)",now_gmt,local_s.c_str());
+		String local_s = timeToString(now);
+		LOGE("attempt to call myIOTDataLog::addRecord(%d) with bad time(%s)",now,local_s.c_str());
 		return false;
 	}
 
@@ -227,33 +258,13 @@ bool myIOTDataLog::addRecord(const logRecord_t in_rec)
 
 	m_head = new_head;
 	logRecord_t new_rec = mem_rec(at);
-	*new_rec = now_gmt;
+	*new_rec = now;
 	memcpy(&new_rec[1],in_rec,m_num_cols * sizeof(uint32_t));
 
 	// debugging
 
 #if DEBUG_QUEUE > 1
-	logRecord_t dbg_rec = new_rec;
-	String tm = timeToString(*dbg_rec);
-	LOGD("   dt(%u) = %s",*dbg_rec++,tm.c_str());
-	for (int i=0; i<m_num_cols; i++)
-	{
-		uint32_t col_type = m_col[i].type;
-		if (col_type == LOG_COL_TYPE_FLOAT)
-		{
-			float float_val = *((float*)(dbg_rec++));
-			LOGD("   %-15s = %0.3f",m_col[i].name,float_val);
-		}
-		else if (col_type == LOG_COL_TYPE_INT32)
-		{
-			int32_t int32_val = *((int32_t*)(dbg_rec++));
-			LOGD("   %-15s = %d",m_col[i].name,int32_val);
-		}
-		else
-		{
-			LOGD("   %-15s = %d",m_col[i].name,*dbg_rec++);
-		}
-	}
+	dbg_rec(new_rec);
 #endif
 }
 
@@ -313,16 +324,26 @@ String myIOTDataLog::getChartHeader()
 
 
 //-----------------------------------------
-// getChartData()
+// sendChartData()
 //-----------------------------------------
+// There is a lot of debugging in this routine,
+// Upto 4, normally DEBUG_SEND_DATA==1 or so
 
 
-String myIOTDataLog::sendChartData(uint32_t num_recs)
+String myIOTDataLog::sendChartData(uint32_t secs)
 {
 	String filename = dataFilename();
-	#if DEBUG_SEND_DATA > 1
-		LOGI("sendChartData(%d) from %s",num_recs,filename.c_str());
+	uint32_t cutoff = secs ? time(NULL) - secs : 0;
+
+	#if DEBUG_SEND_DATA
+		String dbg_tm = timeToString(cutoff);
+		LOGI("sendChartData(%d) since %s from %s",secs,secs?dbg_tm.c_str():"forever",filename.c_str());
+		#if DEBUG_SEND_DATA > 1
+			LOGD("cutoff=%u  CONTENT_LENGTH_UNKNOWN=%u",cutoff,CONTENT_LENGTH_UNKNOWN);
+		#endif
 	#endif
+
+	// determine total number of records, if any, in file
 
 	File file;
 	uint32_t num_file_recs = 0;
@@ -350,82 +371,176 @@ String myIOTDataLog::sendChartData(uint32_t num_recs)
 			return "";
 		}
 		num_file_recs = size / m_rec_size;
-		#if DEBUG_SEND_DATA>1
-			LOGD("   file size=%d  num_file_recs=%d",size,num_filerecs);
+		#if DEBUG_SEND_DATA > 1
+			LOGD("file size=%d  num_file_recs=%d",size,num_file_recs);
 		#endif
 	}
 
-	// seek if necessary
+	// check and send records
 
-	uint32_t at = 0;
-	if (num_recs == 0)
-		num_recs = num_file_recs;
-	if (num_recs > num_file_recs)
-		num_recs = num_file_recs;
-	if (num_recs < num_file_recs)
+	#define LOG_BUF_SIZE   512
+
+	uint32_t num_recs = 0;
+    if (myiot_web_server->startBinaryResponse("application/octet-stream", CONTENT_LENGTH_UNKNOWN))
 	{
-		uint32_t rec_at = num_file_recs - num_recs;
-		at = rec_at * m_rec_size;
-		#if DEBUG_SEND_DATA>0
-			LOGD("   Seeking rec %d of %d at byte %d",rec_at,num_file_recs,at);
-		#endif
-		if (!file.seek(at))
+        if (num_file_recs > 0)
 		{
-			LOGE("Could not seek to rec %d of %d at byte %d in %s",rec_at,num_file_recs,at,filename.c_str());
-			file.close();
-			return "";
-		}
-	}
+            uint8_t buffer[LOG_BUF_SIZE + m_rec_size]; // Allocate a buffer for partial records
 
-	// record buffer on stack
-	// content_len 4 byte num_recs followed by records
+            bool done = false;
+            int buffer_offset = 0; 						// Position within the buffer
+            int read_pos = file.size() - LOG_BUF_SIZE;	// Initial read position
+			int extra_bytes = 0;						// Number of bytes moved to after buffer
 
-	#define WRITE_BUF_BYTES		512
-	uint8_t buf[WRITE_BUF_BYTES];
-	uint32_t content_len = 4 + num_recs * m_rec_size;
-
-	#if DEBUG_SEND_DATA
-		LOGD("   sending %d records with content_len(%d)",num_recs,content_len);
-	#endif
-
-	if (myiot_web_server->startBinaryResponse("application/octet-stream", content_len))
-	{
-		if (myiot_web_server->writeBinaryData((const char *)&num_recs,4))
-		{
-
-			uint32_t left = num_recs * m_rec_size;
-			while (left)
+            while (!done)
 			{
-				uint32_t amt = left;
-				if (amt > WRITE_BUF_BYTES)
-					amt = WRITE_BUF_BYTES;
-				#if DEBUG_SEND_DATA > 1
-					LOGD("      reading and sending %d bytes at %d",amt,at);
-				#endif
-				uint32_t bytes = file.read(buf,amt);
-				if (amt != bytes)
+				int read_bytes = LOG_BUF_SIZE;			// Number bytes for this read
+				if (read_pos < 0)
 				{
-					LOGE("Error reading (%d/%d) bytes at %d from %s",bytes,amt,at,filename.c_str());
-					left = 0;
+					buffer_offset = -read_pos;
+					read_bytes -= buffer_offset;
+					read_pos = 0;
 				}
-				else if (!myiot_web_server->writeBinaryData((const char *)buf,amt))
+
+				if (DEBUG_SEND_DATA > 1)
+					LOGD("seeking to file_offset(%d)",read_pos);
+
+                if (!file.seek(read_pos))
 				{
-					left = 0;
-				}
-				else
+                    LOGE("Could not seek to byte %d", read_pos);
+                    file.close();
+                    return "";
+                }
+
+				if (DEBUG_SEND_DATA > 1)
+					LOGD("    reading %d bytes at file_offset(%d) to buffer_offset(%d)",read_bytes,read_pos,buffer_offset);
+
+                uint32_t bytes = file.read(buffer + buffer_offset, read_bytes);
+				if (bytes != read_bytes)
 				{
-					at += amt;
-					left -= amt;
+                    LOGE("Error reading (%d/%d) at read_pos=%d", bytes,read_bytes,read_pos);
+                    file.close();
+                    return "";
 				}
-			}
-		}
-	}
+
+                // Calculate the number of complete records within the buffer
+				// including any previously moved extra_bytes
+
+                uint32_t buf_recs = (read_bytes + extra_bytes) / m_rec_size;
+
+				if (DEBUG_SEND_DATA > 1)
+					LOGD("    buf_recs = (%d + %d) / %d = %d",read_bytes,extra_bytes,m_rec_size,buf_recs);
+
+				// calculate offset within the whole buffer for the last available record
+
+				int offset = buffer_offset + read_bytes + extra_bytes - m_rec_size;
+					// buffer[buffer_offset + read_bytes + extra_bytes] - 1 is the end of a record
+					// that starts at buffer_offset + read_bytes + extra_bytes - m_rec_size.  We will send
+					// records from the end of the combined buffer, working backwards.
+
+				// check records dt's versus cutoff, working backwards from there,
+				// counting up the number to send
+
+				int num_send = 0;
+				logRecord_t send_rec = NULL;  	// pointer to the starting record to send, if any
+				for (uint32_t i=0; i<buf_recs; i++)
+				{
+					logRecord_t rec = (logRecord_t) (buffer + offset);
+
+					if (DEBUG_SEND_DATA > 2)
+					{
+						LOGD("       checking backward(%d) at offset %d",i,offset);
+						if (DEBUG_SEND_DATA > 3)
+							dbg_rec(rec);
+					}
+					
+					// Check if the condition is met
+                    // and only send the record if not done
+
+					done = *rec < cutoff;
+                    if (done)
+					{
+						if (DEBUG_SEND_DATA > 2)
+							LOGD("           CONDITION MET");
+                        break;
+					}
+
+					num_send++;
+                    num_recs++;
+					send_rec = rec;
+
+					// move to the previous full record, if any, in the buffer
+					// the loop should naturally end on the last full record
+
+					if (offset >= m_rec_size)
+						offset -= m_rec_size;
+
+                }
+
+				// Write the records to the client
+
+				if (num_send)
+				{
+                    if (DEBUG_SEND_DATA > 1)
+					{
+						LOGD("    sending(%d) records from offset(%d)",num_send,offset);
+						if (DEBUG_SEND_DATA > 2)
+							dbg_rec(send_rec);
+					}
+					
+                    if (!myiot_web_server->writeBinaryData((const char*)send_rec, num_send * m_rec_size))
+					{
+                        file.close();
+                        return "";
+                    }
+				}
+
+				// check for last possible read
+
+				if (DEBUG_SEND_DATA>1)
+					LOGD("loop done(%d) offset=%d buffer_offset=%d read_pos=%d",done,offset,buffer_offset,read_pos);
+
+				// if there's an odd bit, move it to the end of the buffer
+
+				if (!done)
+				{
+					if (read_pos == 0)
+					{
+						if (DEBUG_SEND_DATA > 1)
+							LOGD("           END OF FILE");
+						done = 1;
+						break;
+					}
+					read_pos -= LOG_BUF_SIZE;
+
+					extra_bytes = 0;
+					if (offset > buffer_offset)
+					{
+						extra_bytes = offset - buffer_offset;
+						if (DEBUG_SEND_DATA > 1)
+							LOGD("Moving %d extra_bytes from %d to %d", extra_bytes, buffer_offset,LOG_BUF_SIZE);
+						memcpy(buffer + LOG_BUF_SIZE, buffer + buffer_offset, extra_bytes);
+					}
+				}
+            }
+        }
+
+		// myiot_web_server->finishBinaryResponse();
+			// we write exactly the binary data, no ending cr/lf
+
+	}	// binary response started
 
 	if (file)
 		file.close();
-	// 	myiot_web_server->finishBinaryResponse();
+
+	#if DEBUG_SEND_DATA
+		LOGD("   sendChartData() sent %d/%d records",num_recs,num_file_recs);
+	#endif
+
 	return RESPONSE_HANDLED;
 }
+
+
 
 
 

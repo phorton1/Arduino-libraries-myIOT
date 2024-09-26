@@ -15,14 +15,26 @@ myIOTWebServer::myIOTWebServer(int port) :
 }
 
 
-bool myIOTWebServer::startBinaryResponse(const char* mime_type, int content_length)
+bool myIOTWebServer::startBinaryResponse(const char* mime_type, uint32_t content_length)
 {
+    _contentLength = content_length;
+        // base class uses member variable to switch to chunked,
+        // NOT that which is passed in _prepareHeader!!
+        
     m_content_len = content_length;
     m_content_written = 0;
 
+	// LOGD("content_length=%u CONTENT_LENGTH_UNKNOWN=%u",content_length,CONTENT_LENGTH_UNKNOWN);
+
     String header;
     // "binary/octet-stream"
+
+    // set to HTTP 1.0 to send binary data without chunking
+    
+    _currentVersion = 0;
     _prepareHeader(header, 200, mime_type, content_length);
+    _currentVersion = 1;
+
     int header_len = header.length();
     int bytes = _currentClientWrite(header.c_str(), header_len);
     if (bytes != header_len)
@@ -33,9 +45,11 @@ bool myIOTWebServer::startBinaryResponse(const char* mime_type, int content_leng
     return true;
 }
 
+#include <errno.h>
+
 bool myIOTWebServer::writeBinaryData(const char *data, int len)
 {
-    if (len<=0 || m_content_written + len > m_content_len)
+    if (len<=0 || (m_content_len != CONTENT_LENGTH_UNKNOWN && m_content_written + len > m_content_len))
     {
         LOGE("writeBinaryData(%d) attempted at byte(%d) of (%d)",len,m_content_written,m_content_len);
         return false;
@@ -43,10 +57,10 @@ bool myIOTWebServer::writeBinaryData(const char *data, int len)
     int bytes = _currentClientWrite(data, len);
     if (bytes != len)
     {
-        LOGE("writeBinaryData(%d) failed at byte(%d) of (%d)",len,m_content_written,m_content_len);
+        LOGE("ERROR(%d) writeBinaryData(%d/%d) failed at byte(%d) of (%d)",errno,bytes,len,m_content_written,m_content_len);
         return false;
     }
-
+    m_content_written += bytes;
     return true;
 }
 

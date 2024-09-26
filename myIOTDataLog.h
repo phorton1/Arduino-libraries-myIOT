@@ -16,6 +16,8 @@
 
 #include <SD.h>
 
+#define DATA_COLS_MAX			20
+	// an arbitrary upper limit
 #define LOG_COL_TYPE_UINT32		0x00000001
 #define LOG_COL_TYPE_INT32		0x00000002
 #define LOG_COL_TYPE_FLOAT		0x00000004
@@ -98,10 +100,9 @@ public:
 
 	String getChartHeader();
 		// returns a String containing the json used to create a chart
-	String sendChartData(uint32_t num_recs);
+	String sendChartData(uint32_t secs);
 		// sends the chart data to the myiot_web_server and returns
-		// RESPONSE_HANDLED. num_recent_recs is determined by the
-		// the client and their logging rate, where 0 means "all"
+		// RESPONSE_HANDLED. 0 means all.
 
 
 private:
@@ -125,6 +126,7 @@ private:
 	
 	String dataFilename();
 	bool writeSDRecs(File &file, const char *what, int at, int num_recs);
+	void dbg_rec(logRecord_t rec);
 
 };
 

@@ -26,12 +26,12 @@ public:
 
     myIOTWebServer(int port = 80);
 
-    bool startBinaryResponse(const char *mime_type, int content_length);
+    bool startBinaryResponse(const char *mime_type, uint32_t content_length);
     bool writeBinaryData(const char *data, int len);
     bool finishBinaryResponse();
 
-    int m_content_len;
-    int m_content_written;
+    uint32_t m_content_len;
+    uint32_t m_content_written;
     
 };
 
