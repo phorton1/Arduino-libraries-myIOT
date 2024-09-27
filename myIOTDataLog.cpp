@@ -12,26 +12,9 @@
 // scale LABELS can be changed, but their values are always charted against
 // the ABSOLUTE_SCALE, so the data must be normalized.
 //
-// This gives me two choices, I think :
-//
-//		normalize all subsquent column data to the 0th column.
-//			In other words, if col0 is temp1, and temp1 goes from
-//			 -32 to -20, then all the other columns will be scaled
-// 			from -32 to -20 the temperature is from, even though
-//			their min&max scales on the yaxisN are arbitrary
-//
-//  or more sanely:
-//
-//		try to use a hidden main yaxis with min0 and max0,
-//			and then scale all the values within their own
-//			min and max values.
-// rather than send the data in a raw jqplot ready format
-// which means sending a bunch of text, redundant at that,
-// we send the raw binary data for each record.
-//
-// This object will eventually have a more complicated API,
-// splitting the responsibility for graph scales between
-// the app specific C++ and generic HTML/javascript.
+// This results in the javascript normalize all subsquent column data
+// to the 0th column. In other words, if col0 is temp1, and temp1 goes from
+// -32 to -20, then all the other columns will be scaled from -32 to -20.
 //
 // Normalization and magic tricks to get jqPlot to display
 // decent scales are currently all performed in the javascript.
@@ -44,20 +27,18 @@
 //   displayed accuracy
 // - having the app explicitly determine the scales with
 //   min and max members per column and API on this object.
+//
+// Other options might include
+//
 // - allowing the app and/or user to specify if the zooming
 //   javascript should be included.
 // - allowing the user to specify, in the HTML, which cols
-//   they want to display
-// - allowing the user to specify the period of time they
-//   wish to look at, based on ..
-// - storing the data on the SD card with or without an
-//   additional date-index file of some sort.
-// - generally addressing memory usage in myIOT apps
-// - changing to an aynchronous myIOTWebServer, which would
-//   require a lot of reworking.
+//   they want to initially display (and remembering them
+//	 on refreshes).
 //
-// I am checking this in as-is because it is a pretty big
-// advancement.
+// Current bug is that zoom and displayed cols
+// is lost during refresh.
+
 
 #include "myIOTDataLog.h"
 
@@ -70,11 +51,12 @@
 // #include <FS.h>
 
 
-#define DEBUG_QUEUE			0
+#define DEBUG_ADD			0
 #define DEBUG_SEND_DATA		1
 
 
 #define ILLEGAL_DT		1726764664		// 2024-09-19  11:51:04a Panama Local Time
+
 
 myIOTDataLog::myIOTDataLog(
 		const char *name,
@@ -85,53 +67,8 @@ myIOTDataLog::myIOTDataLog(
 	m_col(cols)
 {
 	m_rec_size = (1 + m_num_cols) * sizeof(uint32_t);
-
-	m_num_alloc = 0;
-	m_rec_buffer = NULL;
-	m_head = 0;
-	m_tail = 0;
 }
 
-
-bool myIOTDataLog::init(int num_mem_recs)
-{
-	if (m_num_cols > DATA_COLS_MAX)
-	{
-		LOGE("Illegal number of myIOTDataLog colums(%d) > %d",m_num_cols,DATA_COLS_MAX);
-		return false;
-	}
-	if (!my_iot_device->hasSD())
-	{
-		LOGE("No SD Card in myIOTDataLog::init()");
-		return false;
-	}
-	if (!num_mem_recs)
-	{
-		LOGW("myIOTDataLog::init(0) called. Using default 10 in-memory records");
-		num_mem_recs = 10;
-	}
-	if (!num_mem_recs > 100)
-	{
-		LOGW("myIOTDataLog::init(%d) called. Using maximum of 100 in-memory records",num_mem_recs);
-		num_mem_recs = 100;
-	}
-	
-	m_num_alloc = num_mem_recs;
-	int bytes = m_num_alloc * m_rec_size;
-	LOGI("myIOTDataLog(%s) init(%d) will require %d bytes",
-		 m_name,
-		 m_num_alloc,
-		 bytes);
-	m_rec_buffer = new uint8_t[bytes];
-	memset(m_rec_buffer,0,bytes);
-
-	return true;
-}
-
-
-//---------------------------------------------------
-// addRecord() and flushToSD()
-//---------------------------------------------------
 
 String myIOTDataLog::dataFilename()
 {
@@ -167,402 +104,62 @@ void myIOTDataLog::dbg_rec(logRecord_t rec)
 }
 
 
+//---------------------------------------------------
+// addRecord()
+//---------------------------------------------------
 
-bool myIOTDataLog::writeSDRecs(File &file, const char *what, int at, int num_recs)
+bool myIOTDataLog::addRecord(const logRecord_t rec)
 {
-	int num_bytes = num_recs * m_rec_size;
-
-	#if DEBUG_QUEUE
-		LOGD("   writing %d records in %d bytes from %s of queue",num_recs,num_bytes,what);
-	#endif
-
-	logRecord_t rec = mem_rec(at);
-	int bytes = file.write((const uint8_t*)rec,num_bytes);
-	if (bytes != num_bytes)
+	*rec = time(NULL);
+	if (*rec < ILLEGAL_DT)
 	{
-		LOGE("Error writing %d records in %d bytes from %s of queue to %s",
-			 num_recs,num_bytes,what,dataFilename().c_str());
+		String stime = timeToString(*rec);
+		LOGE("attempt to call myIOTDataLog::addRecord(%d) at bad time(%s)",*rec,stime.c_str());
 		return false;
 	}
-	return true;
-}
-
-
-
-bool myIOTDataLog::flushToSD()
-{
-	int use_head = m_head;
-	if (m_tail == use_head)
-		return true;		// nothing to be written
 
 	String filename = dataFilename();
-#if DEBUG_QUEUE
-	LOGD("myIOTDataLog::flushToSD(%s) alloc(%d) use_head(%d) tail(%d)",filename.c_str(),m_num_alloc,use_head,m_tail);
-#endif
-
 	File file = SD.open(filename, FILE_APPEND);
 	if (!file)
 	{
-		LOGE("Could not open %s for writing",filename.c_str());
+		LOGE("flushToSD() could not open %s for appending",filename.c_str());
 		return false;
 	}
 
-	bool ok = true;
-	if (m_tail > use_head)	// write end of buffer
+	uint32_t size = file.size();
+#if DEBUG_ADD
+	int num_recs = size / m_rec_size;
+	LOGD("myIOTDataLog::addRecord(%d) at ",num_recs + 1,size);
+	#if DEBUG_ADD > 1
+		dbg_rec(rec);
+	#endif
+#endif
+
+	bool retval = true;
+	int bytes = file.write((uint8_t *)rec,m_rec_size);
+	if (bytes != m_rec_size)
 	{
-		int num_write = m_num_alloc - m_tail;
-		ok = writeSDRecs(file,"end",m_tail,num_write);
-		if (ok)
-			m_tail = 0;
-	}
-	if (ok && use_head > m_tail)
-	{
-		int num_write = use_head - m_tail;
-		ok = writeSDRecs(file,"start",m_tail,num_write);
-		if (ok)
-			m_tail = use_head;
+		LOGE("Error appending(%d/%d) bytes at %d in %s",bytes,m_rec_size,size,filename.c_str());
+		retval = false;
 	}
 
 	file.close();
-	return ok;
+	return retval;
 }
-
-
-
-bool myIOTDataLog::addRecord(const logRecord_t in_rec)
-{
-	uint32_t now = time(NULL);
-	if (now < ILLEGAL_DT)
-	{
-		String local_s = timeToString(now);
-		LOGE("attempt to call myIOTDataLog::addRecord(%d) with bad time(%s)",now,local_s.c_str());
-		return false;
-	}
-
-	int at = m_head;
-	int new_head = m_head + 1;
-	if (new_head >= m_num_alloc)
-		new_head = 0;
-	if (new_head == m_tail)
-	{
-		LOGE("myIOTDataLog::addRecord() buffer overflow alloc=%d head=%d tail=%d",
-			m_num_alloc,
-			m_head,
-			m_tail);
-		return false;
-	}
-
-#if DEBUG_QUEUE
-	LOGD("myIOTDataLog::addRecord(%d) alloc(%d) new_head(%d) tail(%d)",at,m_num_alloc,new_head,m_tail);
-#endif
-
-	m_head = new_head;
-	logRecord_t new_rec = mem_rec(at);
-	*new_rec = now;
-	memcpy(&new_rec[1],in_rec,m_num_cols * sizeof(uint32_t));
-
-	// debugging
-
-#if DEBUG_QUEUE > 1
-	dbg_rec(new_rec);
-#endif
-}
-
-
-//-----------------------------------------
-// getChartHeader()
-//-----------------------------------------
-
-void addJsonVal(String &rslt, const char *field, String val, bool quoted, bool comma, bool cr)
-{
-	rslt += "\"";
-	rslt += field;
-	rslt += "\":";
-	if (quoted) rslt += "\"";
-	rslt += val;
-	if (quoted) rslt += "\"";
-	if (comma) rslt += ",";
-	if (cr) rslt += "\n";
-}
-
-
-String myIOTDataLog::getChartHeader()
-{
-	String rslt = "{\n";
-
-	addJsonVal(rslt,"name",m_name,true,true,true);
-	addJsonVal(rslt,"num_cols",String(m_num_cols),false,true,true);
-
-	rslt += "\"col\":[\n";
-
-	for (int i=0; i<m_num_cols; i++)
-	{
-		if (i) rslt += ",";
-		rslt += "{";
-
-		const logColumn_t *col = &m_col[i];
-		const char *str =
-			col->type == LOG_COL_TYPE_FLOAT ? "float" :
-			col->type == LOG_COL_TYPE_INT32 ? "int32_t" :
-			"uint32_t";
-
-		addJsonVal(rslt,"name",col->name,							true,true,false);
-		addJsonVal(rslt,"type",str,									true,true,false);
-		addJsonVal(rslt,"tick_interval",String(col->tick_interval),	false,false,true);
-		rslt += "}\n";
-	}
-	rslt += "]\n";
-	rslt += "}";
-
-	#if 0
-		Serial.print("myIOTDataLog::getChartHeader()=");
-		Serial.println(rslt.c_str());
-	#endif
-	
-	return rslt;
-}
-
-
-//-----------------------------------------
-// sendChartData()
-//-----------------------------------------
-// There is a lot of debugging in this routine,
-// Upto 4, normally DEBUG_SEND_DATA==1 or so
-
-
-String myIOTDataLog::sendChartData(uint32_t secs)
-{
-	String filename = dataFilename();
-	uint32_t cutoff = secs ? time(NULL) - secs : 0;
-
-	#if DEBUG_SEND_DATA
-		String dbg_tm = timeToString(cutoff);
-		LOGI("sendChartData(%d) since %s from %s",secs,secs?dbg_tm.c_str():"forever",filename.c_str());
-		#if DEBUG_SEND_DATA > 1
-			LOGD("cutoff=%u  CONTENT_LENGTH_UNKNOWN=%u",cutoff,CONTENT_LENGTH_UNKNOWN);
-		#endif
-	#endif
-
-	// determine total number of records, if any, in file
-
-	File file;
-	uint32_t num_file_recs = 0;
-	if (!SD.exists(filename))
-	{
-		LOGW("missing %s",filename.c_str());
-	}
-	else
-	{
-		file = SD.open(filename, FILE_READ);
-		if (!file)
-		{
-			LOGE("Could not open %s for reading",filename.c_str());
-			return "";
-		}
-		uint32_t size = file.size();
-		if (!size)
-		{
-			LOGW("empty %s",filename.c_str());
-		}
-		else if (size % m_rec_size)
-		{
-			LOGE("%s size(%d) is not a multiple of rec_size(%d)",filename.c_str(),size,m_rec_size);
-			file.close();
-			return "";
-		}
-		num_file_recs = size / m_rec_size;
-		#if DEBUG_SEND_DATA > 1
-			LOGD("file size=%d  num_file_recs=%d",size,num_file_recs);
-		#endif
-	}
-
-	// check and send records
-
-	#define LOG_BUF_SIZE   512
-
-	uint32_t num_recs = 0;
-    if (myiot_web_server->startBinaryResponse("application/octet-stream", CONTENT_LENGTH_UNKNOWN))
-	{
-        if (num_file_recs > 0)
-		{
-            uint8_t buffer[LOG_BUF_SIZE + m_rec_size]; // Allocate a buffer for partial records
-
-            bool done = false;
-            int buffer_offset = 0; 						// Position within the buffer
-            int read_pos = file.size() - LOG_BUF_SIZE;	// Initial read position
-			int extra_bytes = 0;						// Number of bytes moved to after buffer
-
-            while (!done)
-			{
-				int read_bytes = LOG_BUF_SIZE;			// Number bytes for this read
-				if (read_pos < 0)
-				{
-					buffer_offset = -read_pos;
-					read_bytes -= buffer_offset;
-					read_pos = 0;
-				}
-
-				if (DEBUG_SEND_DATA > 1)
-					LOGD("seeking to file_offset(%d)",read_pos);
-
-                if (!file.seek(read_pos))
-				{
-                    LOGE("Could not seek to byte %d", read_pos);
-                    file.close();
-                    return "";
-                }
-
-				if (DEBUG_SEND_DATA > 1)
-					LOGD("    reading %d bytes at file_offset(%d) to buffer_offset(%d)",read_bytes,read_pos,buffer_offset);
-
-                uint32_t bytes = file.read(buffer + buffer_offset, read_bytes);
-				if (bytes != read_bytes)
-				{
-                    LOGE("Error reading (%d/%d) at read_pos=%d", bytes,read_bytes,read_pos);
-                    file.close();
-                    return "";
-				}
-
-                // Calculate the number of complete records within the buffer
-				// including any previously moved extra_bytes
-
-                uint32_t buf_recs = (read_bytes + extra_bytes) / m_rec_size;
-
-				if (DEBUG_SEND_DATA > 1)
-					LOGD("    buf_recs = (%d + %d) / %d = %d",read_bytes,extra_bytes,m_rec_size,buf_recs);
-
-				// calculate offset within the whole buffer for the last available record
-
-				int offset = buffer_offset + read_bytes + extra_bytes - m_rec_size;
-					// buffer[buffer_offset + read_bytes + extra_bytes] - 1 is the end of a record
-					// that starts at buffer_offset + read_bytes + extra_bytes - m_rec_size.  We will send
-					// records from the end of the combined buffer, working backwards.
-
-				// check records dt's versus cutoff, working backwards from there,
-				// counting up the number to send
-
-				int num_send = 0;
-				logRecord_t send_rec = NULL;  	// pointer to the starting record to send, if any
-				for (uint32_t i=0; i<buf_recs; i++)
-				{
-					logRecord_t rec = (logRecord_t) (buffer + offset);
-
-					if (DEBUG_SEND_DATA > 2)
-					{
-						LOGD("       checking backward(%d) at offset %d",i,offset);
-						if (DEBUG_SEND_DATA > 3)
-							dbg_rec(rec);
-					}
-					
-					// Check if the condition is met
-                    // and only send the record if not done
-
-					done = *rec < cutoff;
-                    if (done)
-					{
-						if (DEBUG_SEND_DATA > 2)
-							LOGD("           CONDITION MET");
-                        break;
-					}
-
-					num_send++;
-                    num_recs++;
-					send_rec = rec;
-
-					// move to the previous full record, if any, in the buffer
-					// the loop should naturally end on the last full record
-
-					if (offset >= m_rec_size)
-						offset -= m_rec_size;
-
-                }
-
-				// Write the records to the client
-
-				if (num_send)
-				{
-                    if (DEBUG_SEND_DATA > 1)
-					{
-						LOGD("    sending(%d) records from offset(%d)",num_send,offset);
-						if (DEBUG_SEND_DATA > 2)
-							dbg_rec(send_rec);
-					}
-					
-                    if (!myiot_web_server->writeBinaryData((const char*)send_rec, num_send * m_rec_size))
-					{
-                        file.close();
-                        return "";
-                    }
-				}
-
-				// check for last possible read
-
-				if (DEBUG_SEND_DATA>1)
-					LOGD("loop done(%d) offset=%d buffer_offset=%d read_pos=%d",done,offset,buffer_offset,read_pos);
-
-				// if there's an odd bit, move it to the end of the buffer
-
-				if (!done)
-				{
-					if (read_pos == 0)
-					{
-						if (DEBUG_SEND_DATA > 1)
-							LOGD("           END OF FILE");
-						done = 1;
-						break;
-					}
-					read_pos -= LOG_BUF_SIZE;
-
-					extra_bytes = 0;
-					if (offset > buffer_offset)
-					{
-						extra_bytes = offset - buffer_offset;
-						if (DEBUG_SEND_DATA > 1)
-							LOGD("Moving %d extra_bytes from %d to %d", extra_bytes, buffer_offset,LOG_BUF_SIZE);
-						memcpy(buffer + LOG_BUF_SIZE, buffer + buffer_offset, extra_bytes);
-					}
-				}
-            }
-        }
-
-		// myiot_web_server->finishBinaryResponse();
-			// we write exactly the binary data, no ending cr/lf
-
-	}	// binary response started
-
-	if (file)
-		file.close();
-
-	#if DEBUG_SEND_DATA
-		LOGD("   sendChartData() sent %d/%d records",num_recs,num_file_recs);
-	#endif
-
-	return RESPONSE_HANDLED;
-}
-
-
 
 
 
 //-----------------------------
 // getChartHTML()
 //-----------------------------
+// produces
+//		<div id='fridgeData'>
+//			<div id='fridgetData_chart'></div>
+//			<button id=fridgeData_plot_button'>PLOT</button>
+//			<select id=fridgeData_period_select'>
+//			<input type='number' id='fridgeData_refresh_interval'>
+// and uses urls that must be handled by client.
 
-// data_log.m_name = fridgeData
-	// produces
-	//		<div id='fridgeData'>
-	//			<div id='fridgetData_chart'></div>
-	//			<button id=fridgeData_plot_button'>PLOT</button>
-	//			<select id=fridgeData_period_select'>
-	//			<input type='number' id='fridgeData_refresh_interval'>
-	// uses urls that must be handled by client
-	// by calling getChartHeader() and sendChartData(), below
-	//		/custom/chart_header/frigeData and
-	//		/custom/chart_data/fridgeData?secs=NNN
-	//			client is only one who knows how to change
-	//			seconds into #records at this time
-	// because the base myIOTDevice does not keep track of
-	// dataLoggers.  They are instantiated purely by derived devices.
 
 String addSelectOption(int default_value,int value, const char *name)
 {
@@ -658,5 +255,316 @@ String myIOTDataLog::getChartHTML(
 
 
 
-#endif	// !WITH_SD
+
+//-----------------------------------------
+// getChartHeader()
+//-----------------------------------------
+// returns json chart_header string as used by iotChart.js
+
+void addJsonVal(String &rslt, const char *field, String val, bool quoted, bool comma, bool cr)
+{
+	rslt += "\"";
+	rslt += field;
+	rslt += "\":";
+	if (quoted) rslt += "\"";
+	rslt += val;
+	if (quoted) rslt += "\"";
+	if (comma) rslt += ",";
+	if (cr) rslt += "\n";
+}
+
+
+String myIOTDataLog::getChartHeader()
+{
+	String rslt = "{\n";
+
+	addJsonVal(rslt,"name",m_name,true,true,true);
+	addJsonVal(rslt,"num_cols",String(m_num_cols),false,true,true);
+
+	rslt += "\"col\":[\n";
+
+	for (int i=0; i<m_num_cols; i++)
+	{
+		if (i) rslt += ",";
+		rslt += "{";
+
+		const logColumn_t *col = &m_col[i];
+		const char *str =
+			col->type == LOG_COL_TYPE_FLOAT ? "float" :
+			col->type == LOG_COL_TYPE_INT32 ? "int32_t" :
+			"uint32_t";
+
+		addJsonVal(rslt,"name",col->name,							true,true,false);
+		addJsonVal(rslt,"type",str,									true,true,false);
+		addJsonVal(rslt,"tick_interval",String(col->tick_interval),	false,false,true);
+		rslt += "}\n";
+	}
+	rslt += "]\n";
+	rslt += "}";
+
+	#if 0
+		Serial.print("myIOTDataLog::getChartHeader()=");
+		Serial.println(rslt.c_str());
+	#endif
+
+	return rslt;
+}
+
+
+
+
+//================================================
+// backwards SD file iterator
+//================================================
+
+bool startSDBackwards(SDBackwards_t *iter)
+{
+	iter->done = true;
+	iter->read_pos = 0;
+	iter->buf_idx = -1;
+
+	if (iter->dbg_level > 1)
+		LOGD("startSDBackwards(%s) rec_size(%d) buf_size(%d)",
+			 iter->filename, iter->rec_size, iter->buf_size);
+
+	int num_file_recs = 0;
+	if (!SD.exists(iter->filename))
+	{
+		LOGW("missing %s",iter->filename);
+	}
+	else
+	{
+		iter->file = SD.open(iter->filename, FILE_READ);
+		if (!iter->file)
+		{
+			LOGE("Could not open %s for reading",iter->filename);
+			return false;
+		}
+		uint32_t size = iter->file.size();
+		if (!size)
+		{
+			LOGW("empty %s",iter->filename);
+		}
+		else if (size % iter->rec_size)
+		{
+			LOGE("%s size(%d) is not a multiple of rec_size(%d)",iter->filename,size,iter->rec_size);
+			iter->file.close();
+			return false;
+		}
+		num_file_recs = size / iter->rec_size;
+		if (iter->dbg_level > 1)
+			LOGD("file size=%d  num_file_recs=%d",size,num_file_recs);
+	}
+
+	if (num_file_recs > 0)
+	{
+		iter->done = false;
+		iter->read_pos = iter->file.size();	// Initial read position
+		if (iter->dbg_level > 1)
+			LOGD("initial read_pos=%d",iter->read_pos,num_file_recs);
+	}
+
+	// we are setup for the fist iteration
+
+	if (iter->dbg_level > 1)
+		LOGD("startSDBackwards(%s) returning done(%d)",iter->filename,iter->done);
+
+	return true;
+
+}   // startSDBackwards()
+
+
+
+uint8_t *getSDBackwards(SDBackwards_t *iter, int *num_recs)
+	// returns record(s), but only as many as the client
+	// callback has verified that it wanted
+{
+	*num_recs = 0;
+
+	if (iter->done)
+		return NULL;
+
+	if (iter->dbg_level>2)
+		LOGD("getSDBackwards() idx(%d) read_pos(%d)",iter->buf_idx,iter->read_pos);
+
+	if (iter->buf_idx < 0)  // buffer exhausted
+	{
+		if (iter->read_pos == 0)
+		{
+			if (iter->dbg_level > 1)
+				LOGD("           END OF FILE");
+			iter->done = 1;
+			return NULL;
+		}
+
+		int read_bytes = iter->buf_size;
+		if (iter->read_pos < read_bytes)
+		{
+			read_bytes = iter->read_pos;
+			iter->read_pos = 0;
+		}
+		else
+			iter->read_pos -= read_bytes;
+
+		if (iter->dbg_level > 1)
+			LOGD("seeking to file_offset(%d)",iter->read_pos);
+
+		if (!iter->file.seek(iter->read_pos))
+		{
+			LOGE("Could not seek to byte %d", iter->read_pos);
+			iter->file.close();
+			return NULL;
+		}
+
+		if (iter->dbg_level > 1)
+			LOGD("    reading %d bytes at file_offset(%d)",read_bytes,iter->read_pos);
+
+		uint32_t bytes = iter->file.read(iter->buffer, read_bytes);
+		if (bytes != read_bytes)
+		{
+			LOGE("Error reading (%d/%d) at read_pos=%d", bytes,read_bytes,iter->read_pos);
+			iter->file.close();
+			return NULL;
+		}
+
+		iter->num_buf_recs = read_bytes / iter->rec_size;
+		iter->buf_idx = iter->num_buf_recs - 1;
+
+		if (iter->dbg_level > 1)
+			LOGD("    buf_recs=%d idx=%d",iter->num_buf_recs,iter->buf_idx);
+
+	}   // new buffer succesfully read
+
+	if (iter->chunked)
+	{
+		uint8_t *retval = NULL;
+		bool condition = true;
+		while (condition && iter->buf_idx >= 0)
+		{
+			uint8_t *rec = iter->buffer + (iter->rec_size * iter->buf_idx--);
+			condition = iter->record_fxn(iter->client_data,rec);
+			if (condition)
+			{
+				(*num_recs)++;
+				retval = rec;
+			}
+		}
+
+		if (!condition)
+		{
+			if (iter->dbg_level > 1)
+				LOGD("iteration ended by condition at buf_idx(%d)",iter->buf_idx);
+			iter->done = 1;
+			iter->file.close();
+		}
+
+		if (iter->dbg_level > 1)
+			LOGD("getSDBackwards(chunked) returning %d records at index %d",*num_recs,iter->buf_idx + 1);
+		return retval;
+	}
+	else
+	{
+		*num_recs = 1;
+		uint8_t *rec = iter->buffer + (iter->rec_size * iter->buf_idx--);
+		bool condition = iter->record_fxn(iter->client_data,rec);
+		if (condition)
+			return rec;
+	}
+
+	// iteration ended by user condition
+
+	iter->done = 1;
+	iter->file.close();
+	return NULL;
+}
+
+
+
+
+//-----------------------------------------
+// sendChartData()
+//-----------------------------------------
+// There is a lot of debugging in this routine,
+// Upto 4, normally DEBUG_SEND_DATA==1 or so
+
+
+bool chartDatCondition(uint32_t cutoff, uint8_t *rec)
+{
+	uint32_t ts = *((uint32_t *) rec);
+	if (ts >= cutoff)
+		return true;
+#if DEBUG_SEND_DATA
+	String dt1 = timeToString(ts);
+	String dt2 = timeToString(cutoff);
+	LOGD("    chartDatCondition(FALSE) at %s < %s",dt1.c_str(),dt2.c_str());
+#endif
+	return false;
+}
+
+
+String myIOTDataLog::sendChartData(uint32_t secs)
+{
+	#define BASE_BUF_SIZE	1024
+
+	String filename = dataFilename();
+	uint32_t cutoff = secs ? time(NULL) - secs : 0;
+
+	// pick bufsize > 512 that will hold even number of records
+
+	int buf_size = ((BASE_BUF_SIZE + m_rec_size-1) / m_rec_size) * m_rec_size;
+	uint8_t stack_buffer[buf_size];
+
+	#if DEBUG_SEND_DATA
+		String dbg_tm = timeToString(cutoff);
+		LOGI("sendChartData(%d) since %s from %s",secs,secs?dbg_tm.c_str():"forever",filename.c_str());
+		#if DEBUG_SEND_DATA > 1
+			LOGD("buf_size(%d) cutoff=(%d)",buf_size,cutoff);
+		#endif
+	#endif
+
+	// initialize iterator struct
+
+	SDBackwards_t iter;
+	iter.chunked        = 1;
+	iter.client_data    = cutoff;
+	iter.filename       = filename.c_str();
+	iter.rec_size       = m_rec_size;
+	iter.record_fxn     = chartDatCondition;
+	iter.buffer         = stack_buffer;                 // an even multiple of rec_size
+	iter.buf_size       = buf_size;
+	iter.dbg_level      = DEBUG_SEND_DATA;              // 0..2
+
+	if (!startSDBackwards(&iter))
+		return "";
+
+    if (!myiot_web_server->startBinaryResponse("application/octet-stream", CONTENT_LENGTH_UNKNOWN))
+		return "";
+
+	int sent = 0;
+	int num_file_recs = iter.file ? iter.file.size() / m_rec_size : 0;
+
+	int num_recs;
+	uint8_t *base_rec = getSDBackwards(&iter,&num_recs);
+	while (num_recs)
+	{
+		sent += num_recs;
+		if (!myiot_web_server->writeBinaryData((const char*)base_rec, num_recs * m_rec_size))
+		{
+			if (iter.file)
+				iter.file.close();
+			return "";
+		}
+		base_rec = getSDBackwards(&iter,&num_recs);
+	}
+
+	#if DEBUG_SEND_DATA
+		LOGD("    sendChartData() sent %d/%d records",sent,num_file_recs);
+	#endif
+
+	return RESPONSE_HANDLED;
+}
+
+
+
+#endif	// WITH_SD
 

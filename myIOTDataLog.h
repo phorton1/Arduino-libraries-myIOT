@@ -3,14 +3,11 @@
 //-----------------------------------------------
 // requires WITH_SD=1;  evaulates to nothing if not
 
-
 #pragma once
 
 #include <myIOTTypes.h>
 
-#if !WITH_SD
-	#pragma message("dataLog requires myIOT define WITH_SD=1")
-#else
+#if WITH_SD
 
 // The rest of this file
 
@@ -35,8 +32,8 @@ typedef struct {
 
 
 typedef uint32_t *logRecord_t;
-	// an array of uin32's where the 0th the dt in unix format
-	// followed by num_cols 32bit values
+	// an array of uint32_t's where the 0th the dt
+	// in unix format followed by num_cols 32bit values
 
 
 class myIOTDataLog
@@ -47,57 +44,29 @@ public:
 		const char *name,
 		int num_cols,
 		logColumn_t *cols );
-	bool init(int num_mem_recs = 10);
-		// Will report an error and return false
-		// if there is no SD Card.  The size of the
-		// memory queue is determined by the application
-		// based on it's likely addRecord:flushToSD() ratio,
-		// where 10 is a good default.
 
+	String dataFilename();
+		// returns "name.datalog"
 	bool addRecord(const logRecord_t rec);
-		// Quickly add a record to a in-memory queue to be
-		// written to the SD Card later.  The queue can
-		// hold a limited number of records before
-		// flushToSD() must be called.  Will report an error
-		// and return false if there is a buffer overflow.
-		// Will report an error an return false if the timestamp
-		// at the front of the record is not a valid current time,
-		// to prevent writing 1970 log records.
-		// Typically called from myIOTDevice's stateMachine task.
-	bool flushToSD();
-		// Flush the in-memory queue (Slow) to the SD card.
-		// Will NOT block calls to addRecord().
-		// Will be added to myIOTDevice::loop() at some point.
-		// Currently called from myIOTDevice's loop() method
-		// BEFORE it calls myIOTDevice::loop() so that sendChartData()
-		// works entire from the SD card.
+		// Will assign the dt field to the record
+		// Writes the record to the SD card.
 
 
 	//----------------------------------------
 	// chart support
 	//----------------------------------------
-	// data_log.m_name = fridgeData
-	// produces
-	//		<div id='fridgeData'>
-	//			<div id='fridgetData_chart'></div>
-	//			<button id=fridgeData_plot_button'>PLOT</button>
-	//			<select id=fridgeData_period_select'>
-	//			<input type='number' id='fridgeData_refresh_interval'>
-	// uses urls that must be handled by client
-	// by calling getChartHeader() and sendChartData(), below
-	//		/custom/chart_header/frigeData and
-	//		/custom/chart_data/fridgeData?secs=NNN
-	//			client is only one who knows how to change
-	//			seconds into #records at this time
-	// because the base myIOTDevice does not keep track of
-	// dataLoggers.  They are instantiated purely by derived devices.
 	
-	String getChartHTML(
-		int height,
-		int width,
-		int period,
-		int refresh);
-
+	String getChartHTML(int height, int width, int period, int refresh);
+		// Returns <div> that contains the chart_div, update button,
+		// 		period selection, and refresh interval inputs.
+		// Currently height and width are fixed; might go away.
+		// Period and refresh are used as defaults for a new browsr load,
+		// 		but browsers tend to keep values through reloads
+		// Uses urls that must be handled by client by calling getChartHeader()
+		// 		and sendChartData() from their onCustomLink() method:
+		//		/custom/chart_header/m_name and
+		//		/custom/chart_data/m_name?secs=NNNAssumes
+		// Assumes the page already includes iotChart.js and dependencies.
 	String getChartHeader();
 		// returns a String containing the json used to create a chart
 	String sendChartData(uint32_t secs);
@@ -112,25 +81,56 @@ private:
 	int m_rec_size;
 	logColumn_t *m_col;
 
-	// in-memory queue
-
-	int m_num_alloc;
-	uint8_t *m_rec_buffer;
-	volatile int m_head;
-	volatile int m_tail;
-
-	logRecord_t mem_rec(int i)
-	{
-		return (logRecord_t) &m_rec_buffer[i * m_rec_size];
-	}
-	
-	String dataFilename();
-	bool writeSDRecs(File &file, const char *what, int at, int num_recs);
 	void dbg_rec(logRecord_t rec);
 
 };
 
 
+//----------------------------------------------------
+// backwards fixed size record SD file iterator
+//----------------------------------------------------
+// static methods available to other clients, like baHistory
+// supports single record or "chunked" responses from getSDBackwards()
 
-#endif	// !WITH_SD
+	typedef bool (*SDBackardsCB)(uint32_t client_data, uint8_t *rec);
+		// return true if iteration should proceed, false otherwise
+
+    typedef struct {
+
+		// members setup by client before calling startSDBackwards()
+
+        bool chunked;				// return buffers and *num_recs possibly > 1
+        uint32_t client_data;		// i.e. "this" or the cutoff_date used by CB method
+        const char *filename;		// SD card file to open and iterate
+        uint32_t rec_size;			// size of a single record in the file
+        SDBackardsCB record_fxn;	// client callback funtion
+        uint8_t *buffer;            // the buffer
+        uint32_t buf_size;			// MUST be an even multiple of rec_size
+        int dbg_level;           	// 0..4
+
+		// membets maintained through an iteration
+
+        File file;
+        bool done;					// iteration has finished
+        int num_buf_recs;			// nuumber of records in the current buffer
+        int read_pos;         		// starts as file.size()
+        int buf_idx;        		// which record in the buffer are we at
+
+    } SDBackwards_t;
+
+
+    extern bool startSDBackwards(SDBackwards_t *iter);
+		// reports returns false on error
+		// returns true if no errors
+		// iter->done set to true if missing or empty file
+		// file will possibly be open if returns true
+    extern uint8_t *getSDBackwards(SDBackwards_t *iter, int *num_recs);
+        // returns record(s), but only as many as the client
+        // callback has verified that it wanted
+		// file will be closed if returns NULL
+
+
+#endif	// WITH_SD
+
+
 

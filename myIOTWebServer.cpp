@@ -5,6 +5,8 @@
 #include "myIOTWebServer.h"
 #include "myIOTLog.h"
 
+#define DEBUG_BINARY_RESPONSE   0
+
 myIOTWebServer *myiot_web_server;
 
 
@@ -17,6 +19,12 @@ myIOTWebServer::myIOTWebServer(int port) :
 
 bool myIOTWebServer::startBinaryResponse(const char* mime_type, uint32_t content_length)
 {
+    #if DEBUG_BINARY_RESPONSE
+        String len_str = content_length == CONTENT_LENGTH_UNKNOWN ?
+            "CONTENT_LENGTH_UNKNOWN" : String(content_length);
+        LOGD("startBinaryResponse(%s,%s)",mime_type,len_str.c_str());
+    #endif
+
     _contentLength = content_length;
         // base class uses member variable to switch to chunked,
         // NOT that which is passed in _prepareHeader!!
@@ -30,10 +38,11 @@ bool myIOTWebServer::startBinaryResponse(const char* mime_type, uint32_t content
     // "binary/octet-stream"
 
     // set to HTTP 1.0 to send binary data without chunking
-    
-    _currentVersion = 0;
+    uint8_t save_version = _currentVersion;
+    if (content_length == CONTENT_LENGTH_UNKNOWN)
+        _currentVersion = 0;
     _prepareHeader(header, 200, mime_type, content_length);
-    _currentVersion = 1;
+    _currentVersion = save_version;
 
     int header_len = header.length();
     int bytes = _currentClientWrite(header.c_str(), header_len);
@@ -49,6 +58,10 @@ bool myIOTWebServer::startBinaryResponse(const char* mime_type, uint32_t content
 
 bool myIOTWebServer::writeBinaryData(const char *data, int len)
 {
+    #if DEBUG_BINARY_RESPONSE
+        LOGD("writeBinaryData(%d)",len);
+    #endif
+
     if (len<=0 || (m_content_len != CONTENT_LENGTH_UNKNOWN && m_content_written + len > m_content_len))
     {
         LOGE("writeBinaryData(%d) attempted at byte(%d) of (%d)",len,m_content_written,m_content_len);
@@ -66,6 +79,10 @@ bool myIOTWebServer::writeBinaryData(const char *data, int len)
 
 bool myIOTWebServer::finishBinaryResponse()
 {
+    #if DEBUG_BINARY_RESPONSE
+        LOGD("finishBinaryResponse()");
+    #endif
+
     int bytes = _currentClientWrite("\r\n", 2);
     if (bytes != 2)
     {
