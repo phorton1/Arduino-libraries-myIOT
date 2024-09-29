@@ -17,6 +17,17 @@ myIOTWebServer::myIOTWebServer(int port) :
 }
 
 
+int myIOTWebServer::getArg(const char *name, int def_value)
+    // get an integer query argument with a default value if missing
+{
+    String val = arg(name);     // arg() is a standard WebServer method
+    if (val != "")
+        return val.toInt();
+    return def_value;
+}
+
+
+
 bool myIOTWebServer::startBinaryResponse(const char* mime_type, uint32_t content_length)
 {
     #if DEBUG_BINARY_RESPONSE

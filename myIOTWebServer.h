@@ -30,6 +30,10 @@ public:
     bool writeBinaryData(const char *data, int len);
     bool finishBinaryResponse();
 
+    int getArg(const char *name, int def_value);
+        // get an integer query argument with a default value if missing
+
+
     uint32_t m_content_len;
     uint32_t m_content_written;
     

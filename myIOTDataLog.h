@@ -73,7 +73,6 @@ public:
 		// sends the chart data to the myiot_web_server and returns
 		// RESPONSE_HANDLED. 0 means all.
 
-
 private:
 
 	const char *m_name;

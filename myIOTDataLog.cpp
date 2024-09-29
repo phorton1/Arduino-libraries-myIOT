@@ -54,9 +54,12 @@
 #define DEBUG_ADD			0
 #define DEBUG_SEND_DATA		1
 
-
 #define ILLEGAL_DT		1726764664		// 2024-09-19  11:51:04a Panama Local Time
 
+
+//------------------------------------
+// implementation
+//------------------------------------
 
 myIOTDataLog::myIOTDataLog(
 		const char *name,
@@ -189,11 +192,28 @@ String myIOTDataLog::getChartHTML(
 
 	rslt += "<div id='";
 	rslt += m_name;
-	rslt += "_chart' style='height:";
-	rslt += String(height);
-	rslt += "px;width:";
-	rslt += String(width);
-	rslt += "px;'></div>\n";
+	rslt += "_chart'";
+	rslt += " class='iot_chart'";
+	
+	#if 0
+		rslt += " height='";
+		rslt += String(height);
+		rslt += "px' width'";
+		rslt += String(width);
+		rslt += "px'";
+	#elif 0
+		rslt += " height:'100%' width:'100%'";
+	#elif 0
+		rslt += " style='height:100%;width:100%;'";
+	#elif 0
+		rslt += " style='height:";
+		rslt += String(height);
+		rslt += "px;width:";
+		rslt += String(width);
+		rslt += "px;'";
+	#endif
+	rslt += ">";
+	rslt += "</div>\n";
 
 	rslt += "&nbsp;&nbsp;&nbsp;\n";
 
@@ -488,7 +508,7 @@ uint8_t *getSDBackwards(SDBackwards_t *iter, int *num_recs)
 // Upto 4, normally DEBUG_SEND_DATA==1 or so
 
 
-bool chartDatCondition(uint32_t cutoff, uint8_t *rec)
+bool chartDataCondition(uint32_t cutoff, uint8_t *rec)
 {
 	uint32_t ts = *((uint32_t *) rec);
 	if (ts >= cutoff)
@@ -496,7 +516,7 @@ bool chartDatCondition(uint32_t cutoff, uint8_t *rec)
 #if DEBUG_SEND_DATA
 	String dt1 = timeToString(ts);
 	String dt2 = timeToString(cutoff);
-	LOGD("    chartDatCondition(FALSE) at %s < %s",dt1.c_str(),dt2.c_str());
+	LOGD("    chartDataCondition(FALSE) at %s < %s",dt1.c_str(),dt2.c_str());
 #endif
 	return false;
 }
@@ -529,7 +549,7 @@ String myIOTDataLog::sendChartData(uint32_t secs)
 	iter.client_data    = cutoff;
 	iter.filename       = filename.c_str();
 	iter.rec_size       = m_rec_size;
-	iter.record_fxn     = chartDatCondition;
+	iter.record_fxn     = chartDataCondition;
 	iter.buffer         = stack_buffer;                 // an even multiple of rec_size
 	iter.buf_size       = buf_size;
 	iter.dbg_level      = DEBUG_SEND_DATA;              // 0..2
