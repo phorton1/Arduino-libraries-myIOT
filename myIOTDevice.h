@@ -67,6 +67,7 @@
 #define ID_LAST_BOOT      "LAST_BOOT"
 #define ID_UPTIME         "UPTIME"
 #define ID_RESET_COUNT    "RESET_COUNT"
+#define ID_DEGREE_TYPE    "DEGREE_TYPE"
 
 #if WITH_AUTO_REBOOT
     #define ID_AUTO_REBOOT    "AUTO_REBOOT"
@@ -78,6 +79,10 @@
     #define ID_MQTT_USER      "MQTT_USER"
     #define ID_MQTT_PASS      "MQTT_PASS"
 #endif
+
+
+#define DEGREE_TYPE_CENTIGRADE  0
+#define DEGREE_TYPE_FARENHEIGHT 1
 
 
 // timezone addition
@@ -302,9 +307,6 @@ class myIOTDevice
         static void reboot();
         static void factoryReset();
 
-
-    protected:
-
         void addValues(const valDescriptor *desc, int num_values);
         void setTabLayouts(valueIdType *dash, valueIdType *config=NULL, valueIdType *device=NULL)
         {
@@ -314,6 +316,7 @@ class myIOTDevice
         }
         void addDerivedToolTips(const char **derived_tooltips, const char **extra_text=NULL);
 
+    protected:
 
         static void onChangeWifi(const myIOTValue *desc, bool val);
         static bool _device_wifi;
@@ -326,6 +329,10 @@ class myIOTDevice
         #endif
 
     private:
+
+        friend class myIOTValue;
+            // for quick access to _degree_type
+
 
         // descriptors
 
@@ -354,6 +361,7 @@ class myIOTDevice
             static String _ntp_server;
         #endif
 
+        static int    _degree_type;     // 0=C, 1=F
         static time_t _device_last_boot;
         static int    _device_uptime;
         static bool   _device_booting;

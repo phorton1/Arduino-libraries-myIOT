@@ -15,9 +15,13 @@
 
 #define DATA_COLS_MAX			20
 	// an arbitrary upper limit
-#define LOG_COL_TYPE_UINT32		0x00000001
-#define LOG_COL_TYPE_INT32		0x00000002
-#define LOG_COL_TYPE_FLOAT		0x00000004
+#define LOG_COL_TYPE_UINT32			0x00000001
+#define LOG_COL_TYPE_INT32			0x00000002
+#define LOG_COL_TYPE_FLOAT			0x00000004
+#define LOG_COL_TYPE_TEMPERATURE	0x00000008
+	// float in Centigrade. Clients can use the
+	// the DEGREE_TYPE to show according to use
+	// preferences.
 
 // the tick_intervals are used to determine the
 // min/max and num_ticks in the javascript.

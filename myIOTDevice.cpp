@@ -71,6 +71,8 @@ static valueIdType device_items[] = {
     ID_STA_SSID,
     ID_STA_PASS,
 
+    ID_DEGREE_TYPE,
+
     ID_DEBUG_LEVEL,
     ID_LOG_LEVEL,
     ID_LOG_COLORS,
@@ -120,6 +122,11 @@ static enumValue tzAllowed[] = {
     "PDT - Los Angeles",
     0};
 
+static enumValue temperatureAllowed[] = {
+    "Centigrade",
+    "Farenheit",
+    0};
+
 
 // in order of presentation via UI 'values' command
 
@@ -156,10 +163,11 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_STA_PASS,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   "" },
     { ID_SSDP,          VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_ssdp,     NULL,                  { .int_range = { DEFAULT_DEVICE_SSDP }} },
 #if WITH_NTP
-    { ID_TIMEZONE,     VALUE_TYPE_ENUM,        VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_tz,       (void *)onChangeTZ,   { .enum_range = { IOT_TZ_EST, tzAllowed }} },
-    { ID_NTP_SERVER,   VALUE_TYPE_STRING,      VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_ntp_server,      NULL,   DEFAULT_NTP_SERVER },
+    { ID_TIMEZONE,      VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_tz,       (void *)onChangeTZ,   { .enum_range = { IOT_TZ_EST, tzAllowed }} },
+    { ID_NTP_SERVER,    VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_ntp_server,      NULL,   DEFAULT_NTP_SERVER },
 #endif
 
+    { ID_DEGREE_TYPE,   VALUE_TYPE_ENUM,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_degree_type,     NULL, { .enum_range = { 1, temperatureAllowed }} },
     { ID_LAST_BOOT,     VALUE_TYPE_TIME,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_last_boot, },
     { ID_UPTIME,        VALUE_TYPE_INT,        VALUE_STORE_PUB,       VALUE_STYLE_HIST_TIME,  (void *) &_device_uptime,   NULL, { .int_range = { 0, DEVICE_MIN_INT, DEVICE_MAX_INT}}  },
     { ID_RESET_COUNT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,  { .int_range = { 0, 0, DEVICE_MAX_INT}}  },
@@ -211,6 +219,8 @@ static const char *device_tooltips[] = {
     ID_WIFI             ,   "Turns the device's <b>Wifi</b> on and off",
     ID_SSDP             ,   "Turns <b>SSDP</b> (Service Search and Discovery Protocol) on and off.  SSDP allows a device attached to Wifi in <i>Station mode</i> to be found by other devices on the LAN (Local Area Network). Examples include the <b>Network tab</b> in <i>Windows Explorer</i> on a <b>Windows</b> computer",
 
+    ID_DEGREE_TYPE      ,   "Sets the default display of DS18B20 temperature values (VALUE_STYLE_TEMPERATURE)",
+
 #if WITH_NTP
     ID_TIMEZONE         ,   "Sets the <b>timezone</b> for the RTC (Real Time Clock) when connected to WiFi in <i>Station mode</i>. There is a very limited set of timezones currently implemented.",
     ID_NTP_SERVER       ,   "Specifies the NTP (Network Time Protocol) <b>Server</b> that will be used when connected to Wifi as a <i>Station</i>",
@@ -249,6 +259,7 @@ const char *myIOTDevice::m_plot_legend = NULL;
 time_t myIOTDevice::_device_last_boot;
 int    myIOTDevice::_device_uptime;
 bool   myIOTDevice::_device_booting;
+int    myIOTDevice::_degree_type;
 
 bool myIOTDevice::_log_colors = DEFAULT_LOG_COLORS;
 bool myIOTDevice::_log_date = DEFAULT_LOG_DATE;

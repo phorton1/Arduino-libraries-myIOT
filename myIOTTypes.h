@@ -198,6 +198,16 @@
     //      sudo service mosquitto start
 #define VALUE_STYLE_HIST_TIME    (VALUE_STYLE_READONLY | VALUE_STYLE_TIME_SINCE)
 
+#define VALUE_STYLE_TEMPERATURE 0x0080
+    // The value is stored as a float in Centigrade, but is
+    // displayed, rendered, and accepted in the UI according
+    // to the DEGREE_TYPE = Centigrade/Farenheit
+#define centigradeToFarenheit(centigrade)   (((((float)centigrade)*9.0)/5.0) + 32.0)
+#define farenheitToCentigrade(farenheit)    ((5.0*(((float)farenheit) - 32.0))/9.0)
+    // in myIOTValue.cpp
+
+    
+
 typedef const char *valueIdType;
 typedef char        valueType;
 typedef uint8_t     valueStore;

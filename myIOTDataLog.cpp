@@ -88,12 +88,14 @@ void myIOTDataLog::dbg_rec(logRecord_t rec)
 	for (int i=0; i<m_num_cols; i++)
 	{
 		uint32_t col_type = m_col[i].type;
-		if (col_type == LOG_COL_TYPE_FLOAT)
+		if (col_type == LOG_COL_TYPE_FLOAT ||
+			col_type == LOG_COL_TYPE_TEMPERATURE)
 		{
 			float float_val = *((float*)(rec++));
 			LOGD("   %-15s = %0.3f",m_col[i].name,float_val);
 		}
 		else if (col_type == LOG_COL_TYPE_INT32)
+
 		{
 			int32_t int32_val = *((int32_t*)(rec++));
 			LOGD("   %-15s = %d",m_col[i].name,int32_val);
@@ -312,6 +314,7 @@ String myIOTDataLog::getChartHeader()
 		const char *str =
 			col->type == LOG_COL_TYPE_FLOAT ? "float" :
 			col->type == LOG_COL_TYPE_INT32 ? "int32_t" :
+			col->type == LOG_COL_TYPE_TEMPERATURE ? "temperature_t" :
 			"uint32_t";
 
 		addJsonVal(rslt,"name",col->name,							true,true,false);
