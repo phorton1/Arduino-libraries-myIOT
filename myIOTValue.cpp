@@ -918,8 +918,14 @@ bool myIOTValue::getIntRange(int *min, int *max)
         *max = getEnumMax(m_desc->enum_range.allowed);
         return true;
     }
-    else
-        return false;
+    else if (m_desc->type == VALUE_TYPE_FLOAT)
+    {
+        *min = m_desc->float_range.float_min;
+        *max = m_desc->float_range.float_max;
+        return true;
+    }
+
+    return false;
 }
 
 

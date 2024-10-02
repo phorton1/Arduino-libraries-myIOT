@@ -73,7 +73,8 @@ class myIOTValue
         #endif
 
         bool getIntRange(int *min, int *max);
-            // For bools, ints, and enums returns true and sets min/max values
+            // For bools, ints, and enums returns true and sets min/max values.
+            // returns truncated min and max for float.
             // chars not currently supported.
             // returns false otherwise.
         String getIntAsString(int val);
