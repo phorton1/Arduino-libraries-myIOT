@@ -47,7 +47,8 @@ public:
 	myIOTDataLog(
 		const char *name,
 		int num_cols,
-		logColumn_t *cols );
+		logColumn_t *cols,
+		int debug_send_data = 1);
 
 	String dataFilename();
 		// returns "name.datalog"
@@ -84,6 +85,10 @@ private:
 	int m_rec_size;
 	logColumn_t *m_col;
 
+	int m_debug_send_data;
+		// client is allowed to set m_debug_send_data=0
+		// to turn off debugging, or higher numbers to
+		// see more
 	void dbg_rec(logRecord_t rec);
 
 };

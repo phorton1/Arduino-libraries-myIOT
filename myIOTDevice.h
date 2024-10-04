@@ -167,6 +167,11 @@ class myIOTDevice
         static int getBootCount()      { return m_boot_count; }
             // stored in RTC memory, only valid for clients after setup()
 
+        // Allow subclasses to control HTTP debug output
+
+        virtual bool showDebug(String path) { return 1; }
+            // return 1 to show, 0 to not show, HTTP header debug output
+
         // Widget & Plot
 
         static void setDeviceWidget(const myIOTWidget_t *the_widget)
@@ -332,7 +337,6 @@ class myIOTDevice
 
         friend class myIOTValue;
             // for quick access to _degree_type
-
 
         // descriptors
 

@@ -64,10 +64,12 @@
 myIOTDataLog::myIOTDataLog(
 		const char *name,
 		int num_cols,
-		logColumn_t *cols ) :
+		logColumn_t *cols,
+		int debug_send_data /* = 1*/ ) :
 	m_name(name),
 	m_num_cols(num_cols),
-	m_col(cols)
+	m_col(cols),
+	m_debug_send_data(debug_send_data)
 {
 	m_rec_size = (1 + m_num_cols) * sizeof(uint32_t);
 }
@@ -509,6 +511,11 @@ uint8_t *getSDBackwards(SDBackwards_t *iter, int *num_recs)
 //-----------------------------------------
 // There is a lot of debugging in this routine,
 // Upto 4, normally DEBUG_SEND_DATA==1 or so
+//
+// Usually single instance, debugging of static method
+// uses global for multiple instances
+
+int g_debug_send_data = 1;
 
 
 bool chartDataCondition(uint32_t cutoff, uint8_t *rec)
@@ -516,11 +523,13 @@ bool chartDataCondition(uint32_t cutoff, uint8_t *rec)
 	uint32_t ts = *((uint32_t *) rec);
 	if (ts >= cutoff)
 		return true;
-#if DEBUG_SEND_DATA
-	String dt1 = timeToString(ts);
-	String dt2 = timeToString(cutoff);
-	LOGD("    chartDataCondition(FALSE) at %s < %s",dt1.c_str(),dt2.c_str());
-#endif
+
+	if (g_debug_send_data)
+	{
+		String dt1 = timeToString(ts);
+		String dt2 = timeToString(cutoff);
+		LOGD("    chartDataCondition(FALSE) at %s < %s",dt1.c_str(),dt2.c_str());
+	}
 	return false;
 }
 
@@ -537,13 +546,15 @@ String myIOTDataLog::sendChartData(uint32_t secs)
 	int buf_size = ((BASE_BUF_SIZE + m_rec_size-1) / m_rec_size) * m_rec_size;
 	uint8_t stack_buffer[buf_size];
 
-	#if DEBUG_SEND_DATA
+	g_debug_send_data = m_debug_send_data;
+	
+	if (m_debug_send_data)
+	{
 		String dbg_tm = timeToString(cutoff);
 		LOGI("sendChartData(%d) since %s from %s",secs,secs?dbg_tm.c_str():"forever",filename.c_str());
-		#if DEBUG_SEND_DATA > 1
+		if (m_debug_send_data > 1)
 			LOGD("buf_size(%d) cutoff=(%d)",buf_size,cutoff);
-		#endif
-	#endif
+	}
 
 	// initialize iterator struct
 
@@ -555,7 +566,7 @@ String myIOTDataLog::sendChartData(uint32_t secs)
 	iter.record_fxn     = chartDataCondition;
 	iter.buffer         = stack_buffer;                 // an even multiple of rec_size
 	iter.buf_size       = buf_size;
-	iter.dbg_level      = DEBUG_SEND_DATA;              // 0..2
+	iter.dbg_level      = m_debug_send_data;              // 0..2
 
 	if (!startSDBackwards(&iter))
 		return "";
@@ -580,9 +591,10 @@ String myIOTDataLog::sendChartData(uint32_t secs)
 		base_rec = getSDBackwards(&iter,&num_recs);
 	}
 
-	#if DEBUG_SEND_DATA
+	if (m_debug_send_data)
+	{
 		LOGD("    sendChartData() sent %d/%d records",sent,num_file_recs);
-	#endif
+	}
 
 	return RESPONSE_HANDLED;
 }

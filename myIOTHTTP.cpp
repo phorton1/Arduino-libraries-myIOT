@@ -377,6 +377,9 @@ void myIOTHTTP::debugRequest(const char* what)
     String path = web_server.urlDecode(web_server.uri());
     if (path == "/favicon.ico")
         return;
+    if (!my_iot_device->showDebug(path))
+        return;
+    
     LOGD("%s %d(%s)",what, web_server.method(),path.c_str());
     proc_entry();
     if (web_server.args())
