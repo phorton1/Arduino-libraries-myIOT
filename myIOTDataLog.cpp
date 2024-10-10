@@ -129,7 +129,7 @@ bool myIOTDataLog::addRecord(const logRecord_t rec)
 	File file = SD.open(filename, FILE_APPEND);
 	if (!file)
 	{
-		LOGE("flushToSD() could not open %s for appending",filename.c_str());
+		LOGE("myIOTDataLog::addRecord() could not open %s for appending",filename.c_str());
 		return false;
 	}
 
@@ -146,7 +146,7 @@ bool myIOTDataLog::addRecord(const logRecord_t rec)
 	int bytes = file.write((uint8_t *)rec,m_rec_size);
 	if (bytes != m_rec_size)
 	{
-		LOGE("Error appending(%d/%d) bytes at %d in %s",bytes,m_rec_size,size,filename.c_str());
+		LOGE("myIOTDataLog::addRecord() Error appending(%d/%d) bytes at %d in %s",bytes,m_rec_size,size,filename.c_str());
 		retval = false;
 	}
 

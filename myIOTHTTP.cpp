@@ -584,10 +584,40 @@ void myIOTHTTP::handle_request()
 
 
 
-// Kludgy
-// the 200 response MUST be sent out for each request from the web,
-// but in order to do so WE must keep track of the number of files and
-// hence, the request number.
+// Kludgy and Weird
+//
+// This method is set to handle POST requests to /spiffs_files or /sdcard_file.
+// The way it "works" in the WebServer is that this method will be called numerous
+//      times as the incoming HTTP request is being parsed, where the WebServer
+//      implementation has decided that for a POST request of a "file", each file
+//      within multi-part HTTP request, and each buffer within those, is treated as
+//      essentially, a separate request (a separate call to this method).
+//      orchestrated by the unweildy "HTTPUpload" object.
+// So, wheras there is a single POST from the Browser, we get multiple pseudo
+//      "requests" to upload files within the POST, and, as mentioned, within
+//      that, separate requests to handle each Part of the request.
+// In order to manage this complexity, I had to add a slew of header parameters
+//      to the POST request, including a unique ID for each POST request, so
+//      that I can identify separate POSTS from ongoing requests within a single
+//      POST, as well as a "filename_size" parameter so that I could tell the
+//      size of each (multipart) file which is not part of the normal "chunked"
+//      POST request.
+// Perhaps the weirdest part is that, although this HTTPUpload thing appears
+//      to be knowledgable about "Aborted" requests, it does not, apparently
+//      act on that information.  So, even after the WebServer itself sets
+//      the "upload state" to UPLOAD_FILE_ABORTED, or if I do as a result of
+//      an error (i.e. the file wont fit on the SPIFFS), the brain-dead WebServer
+//      keeps calling this method until it has parsed the entire POST request,
+//      and I could not find a way to stop it, including even by closing
+//      the client socket.
+// So, in order to at least prevent getting dozens or hundreds of superflouse
+//      error messages, I had to carefully manage the global m_in_upload boolean
+//      and not report subsequent errors after I reset it to false (within
+//      the same request_id).
+// Other weirdnesses of this approach, is that for each UPLOAD_FILE_START
+//      you MUST send a 200 or 404 response.  MAYBE a 404 stops the parser,
+//      but if you don't send the 200, it definitely doesn't work.
+//
 // ALSO SPIFFS FILENAMES ARE LIMITED to 31 characters!!!!
 
 void myIOTHTTP::handle_fileUpload(bool sdcard, fs::FS the_fs)
@@ -601,7 +631,7 @@ void myIOTHTTP::handle_fileUpload(bool sdcard, fs::FS the_fs)
     }
 
     // debugRequest("handle_SPIFFS()");
-    if (web_server.method() == HTTP_GET)    // 1
+    if (web_server.method() == HTTP_GET)
     {
         LOGD("handle_fileUpload(%s) returning 200 on GET request",what);
         web_server.send(200);
@@ -610,6 +640,10 @@ void myIOTHTTP::handle_fileUpload(bool sdcard, fs::FS the_fs)
 
     bool failed = false;
     HTTPUpload& upload = web_server.upload();
+
+    // verbose debugging will show how this is called after failures
+    // until the WebServer parser is good and ready to stop:
+    // LOGD("handle_fileUpload() status=%d",upload.status);
 
     if (upload.status == UPLOAD_FILE_START)
     {
@@ -653,9 +687,7 @@ void myIOTHTTP::handle_fileUpload(bool sdcard, fs::FS the_fs)
             sendUploadProgress(1);
         }
 
-        if (sdcard)
-        {
-        }
+
         if (the_fs.exists(m_upload_filename))
         {
             LOGD("Removing old %s %s",what,m_upload_filename.c_str());
@@ -710,7 +742,11 @@ void myIOTHTTP::handle_fileUpload(bool sdcard, fs::FS the_fs)
                 sendUploadProgress(1);
             }
         }
-        else
+
+        // here, for example, we DONT report the error if we have
+        // closed the output file and turned m_in_upload off
+
+        else if (m_in_upload)
         {
             LOGE("Upload error - file lost");
             failed = true;
@@ -718,91 +754,122 @@ void myIOTHTTP::handle_fileUpload(bool sdcard, fs::FS the_fs)
     }
     else if (upload.status == UPLOAD_FILE_END)
     {
-        LOGI("upload UPLOAD_FILE_END %d",upload.currentSize);
-        if (m_upload_file)
-        {
-            m_upload_file.close();
+        // and here, we only continue to report END and continue
+        // if m_in_upload
 
-            String size_arg_name = upload.filename + "_size";
-            if (web_server.hasArg(size_arg_name))
+        if (m_in_upload)
+        {
+            LOGI("upload UPLOAD_FILE_END %d",upload.currentSize);
+            if (m_upload_file)
             {
-                uint32_t arg_filesize = web_server.arg(size_arg_name).toInt();
-                m_upload_file = the_fs.open(m_upload_filename, FILE_READ);
-                if (!m_upload_file)
+                m_upload_file.close();
+
+                String size_arg_name = upload.filename + "_size";
+                if (web_server.hasArg(size_arg_name))
                 {
-                    LOGE("Could not open %s file for size check",what);
-                    failed = true;
-                }
-                else
-                {
-                    uint32_t actual_filesize = m_upload_file.size();
-                    m_upload_file.close();
-                    if (actual_filesize != arg_filesize)
+                    uint32_t arg_filesize = web_server.arg(size_arg_name).toInt();
+                    m_upload_file = the_fs.open(m_upload_filename, FILE_READ);
+                    if (!m_upload_file)
                     {
-                        LOGE("%s File verify failed expected(%d) actual(%d)",what,arg_filesize,actual_filesize);
+                        LOGE("Could not open %s file for size check",what);
                         failed = true;
                     }
+                    else
+                    {
+                        uint32_t actual_filesize = m_upload_file.size();
+                        m_upload_file.close();
+                        if (actual_filesize != arg_filesize)
+                        {
+                            LOGE("%s File verify failed expected(%d) actual(%d)",what,arg_filesize,actual_filesize);
+                            failed = true;
+                        }
+                    }
                 }
-            }
 
-            if (!failed)
-            {
-                m_num_upload_files--;
-                LOGI("File %s upload(%s) succeeded %d files remaining",what,m_upload_filename.c_str(),m_num_upload_files);
-
-                // OK ... the 200 response MUST be sent out for each request from the web,
-                // but in order to do so WE must keep track of the number of files and
-                // hence, the request number.
-
-                if (m_num_upload_files <= 0)
+                if (!failed)
                 {
-                    LOGU("%s upload finished",what);
-                    web_server.send(200);
-                    sendUploadProgress(1,true);
-                    m_upload_filename = "";
-                    m_in_upload = false;
+                    m_num_upload_files--;
+                    LOGI("File %s upload(%s) succeeded %d files remaining",what,m_upload_filename.c_str(),m_num_upload_files);
 
-                    #if WITH_WS
-                        my_iot_device->onFileSystemChanged(sdcard);
-                    #endif
+                    // OK ... the 200 response MUST be sent out for each request from the web,
+                    // but in order to do so WE must keep track of the number of files and
+                    // hence, the request number.
+
+                    if (m_num_upload_files <= 0)
+                    {
+                        LOGU("%s upload finished",what);
+                        web_server.send(200);
+                        sendUploadProgress(1,true);
+                        m_upload_filename = "";
+                        m_in_upload = false;
+
+                        #if WITH_WS
+                            my_iot_device->onFileSystemChanged(sdcard);
+                        #endif
+                    }
                 }
+
+            }
+            else if (m_upload_filename != "")   // UPLOAD_FILE_END appears to be called one extra time with the file already closed by the above snippet
+            {
+                LOGW("Upload error - %s file disappeared",what);
+                failed = true;
             }
 
-        }
-        else if (m_upload_filename != "")   // UPLOAD_FILE_END appears to be called one extra time with the file already closed by the above snippet
-        {
-            LOGW("Upload error - %s file disappeared",what);
-            failed = true;
-        }
+        }   // only do anything if m_in_upload for sanity
     }
+
     else if (upload.status == UPLOAD_FILE_ABORTED)
     {
-        LOGW("%s UPLOAD_FILE_ABORTED!!!",what);
+        // we may report ABORTED ONE TIME from Browser/WebServer
+
+        if (m_in_upload)
+            LOGW("%s UPLOAD_FILE_ABORTED!!!",what);
         failed = true;
     }
 
     if (failed)
     {
-        LOGW("Cancelling %s upload",what);
+        // This method keeps getting called even after the first UPLOAD_FILE_ABORTED
+        // The following code avoids LOGGING subsquent behaviors after m_in_upload is
+        // set to zero.
 
-        upload = web_server.upload();
-        upload.status = UPLOAD_FILE_ABORTED;
-        errno = ECONNABORTED;
-        web_server.client().stop();
-        sendUploadProgress(1,true,true);
-        delay(100);
-        if (m_upload_file)
-            m_upload_file.close();
-        if (SPIFFS.exists(m_upload_filename))
-            SPIFFS.remove(m_upload_filename);
+        if (m_in_upload)
+        {
+            LOGW("Cancelling %s upload",what);
+
+            if (1)
+            {
+                 web_server.send(404, "text/html", String("Server Upload Failed"));
+            }
+            else
+            {
+                upload = web_server.upload();
+                upload.status = UPLOAD_FILE_ABORTED;
+                errno = ECONNABORTED;
+                web_server.client().stop();
+            }
+            
+            sendUploadProgress(1,true,true);
+            delay(100);
+            if (m_upload_file)
+                m_upload_file.close();
+            if (SPIFFS.exists(m_upload_filename))
+                SPIFFS.remove(m_upload_filename);
+
+            m_in_upload = false;
+
+            #if WITH_WS
+                my_iot_device->onFileSystemChanged(sdcard);
+            #endif
+        }
+
+        // The filename is the only thing that *might* be set
+        // when we get here with "failed".
+
         m_upload_filename = "";
-        m_in_upload = false;
-
-        #if WITH_WS
-            my_iot_device->onFileSystemChanged(sdcard);
-        #endif
-
     }
+
 }   // handle_fileUpload()
 
 
@@ -810,6 +877,9 @@ void myIOTHTTP::handle_fileUpload(bool sdcard, fs::FS the_fs)
 
 
 void myIOTHTTP::handle_OTA()
+    // I'm pretty sure handle_OTA() has the same flaws,
+    // but I didn't mess with this since there is only
+    // ONE file involved.
 {
     if (my_iot_device->getConnectStatus() & IOT_CONNECT_AP)
     {
