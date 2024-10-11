@@ -481,22 +481,43 @@ static void showSPIFFS()
 
 void myIOTDevice::setup()
 {
-    LOGD("myIOTDevice::setup(%s) started",IOT_DEVICE_VERSION);
-    proc_entry();
+    // init SPIFFS and get Values from NVS
 
     if (!SPIFFS.begin())
         LOGE("Could not initialize SPIFFS");
     for (auto value:m_values)
         value->init();
 
-    LOGI("iot_log_level=%d == %s",iot_log_level,getAsString(ID_LOG_LEVEL).c_str());
-    LOGI("iot_debug_level=%d == %s",iot_debug_level,getAsString(ID_DEBUG_LEVEL).c_str());
+    // set timezone in case we are soft-rebooting so
+    // correct time will show as soon as possible,
+    // esp in logfile
 
-    LOGU("DEVICE_NAME:    %s",getName().c_str());
-    LOGU("DEVICE_TYPE:    %s",_device_type.c_str());
-    LOGU("DEVICE_VERSION: %s",_device_version.c_str());
-    LOGU("DEVICE_UUID:    %s",_device_uuid.c_str());
-    LOGU("DEVICE_WIFI:    %d",_device_wifi);
+    extern const char *tzString(IOT_TIMEZONE tz);
+    uint32_t tz_enum = my_iot_device->getEnum(ID_TIMEZONE);
+    const char *tz_string = tzString(static_cast<IOT_TIMEZONE>(tz_enum));
+    setenv("TZ",tz_string,1);
+    tzset();
+
+    // show banner AFTER SD card inited so it shows in logfile
+
+    #if WITH_SD
+        initSDCard();
+    #endif
+
+    LOGU("-------------------------------------------------------");
+    LOGU("myIOTDevice::setup(%s) started",IOT_DEVICE_VERSION);
+    LOGU("-------------------------------------------------------");
+
+    proc_entry();
+
+    LOGD("iot_log_level=%d == %s",iot_log_level,getAsString(ID_LOG_LEVEL).c_str());
+    LOGD("iot_debug_level=%d == %s",iot_debug_level,getAsString(ID_DEBUG_LEVEL).c_str());
+
+    LOGD("DEVICE_NAME:    %s",getName().c_str());
+    LOGD("DEVICE_TYPE:    %s",_device_type.c_str());
+    LOGD("DEVICE_VERSION: %s",_device_version.c_str());
+    LOGD("DEVICE_UUID:    %s",_device_uuid.c_str());
+    LOGD("DEVICE_WIFI:    %d",_device_wifi);
 
     #if 0
         // value failure tests
@@ -513,16 +534,13 @@ void myIOTDevice::setup()
     //  Serial.print(valueListJson());
     showPartitions();
     showSPIFFS();
+    #if WITH_SD
+        showSDCard();
+    #endif
 
     //----------------------------
     // finish setting up
     //----------------------------
-
-    #if WITH_SD
-        initSDCard();
-        showSDCard();
-    #endif
-
     // We (must) reinitialize the RTC memory if either
     // RTCWDT_RTC_RESET or POWERON_RESET, or else it is random.
     // We do this AFTER the SD Carfd is started to facilitate
