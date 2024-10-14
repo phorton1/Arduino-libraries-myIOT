@@ -68,6 +68,8 @@
 #define ID_UPTIME         "UPTIME"
 #define ID_RESET_COUNT    "RESET_COUNT"
 #define ID_DEGREE_TYPE    "DEGREE_TYPE"
+#define ID_RESTART_SD     "RESTART_SD_CARD"
+
 
 #if WITH_AUTO_REBOOT
     #define ID_AUTO_REBOOT    "AUTO_REBOOT"
@@ -133,8 +135,9 @@ class myIOTDevice
 
         #if WITH_SD
             static bool hasSD() { return m_sd_started; }
-            static bool initSDCard();
             static void showSDCard();
+            static void initSDCard();           // init only
+            static void restartSDCard();        // init and show
         #else
             static bool hasSD() { return 0; }
         #endif

@@ -72,6 +72,7 @@ static valueIdType device_items[] = {
     ID_STA_PASS,
 
     ID_DEGREE_TYPE,
+    ID_RESTART_SD,
 
     ID_DEBUG_LEVEL,
     ID_LOG_LEVEL,
@@ -171,6 +172,7 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_LAST_BOOT,     VALUE_TYPE_TIME,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_last_boot, },
     { ID_UPTIME,        VALUE_TYPE_INT,        VALUE_STORE_PUB,       VALUE_STYLE_HIST_TIME,  (void *) &_device_uptime,   NULL, { .int_range = { 0, DEVICE_MIN_INT, DEVICE_MAX_INT}}  },
     { ID_RESET_COUNT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,  { .int_range = { 0, 0, DEVICE_MAX_INT}}  },
+    { ID_RESTART_SD,    VALUE_TYPE_COMMAND,    VALUE_STORE_SUB,       VALUE_STYLE_VERIFY,     NULL,                       (void *) restartSDCard },
 
 #if WITH_AUTO_REBOOT
     { ID_AUTO_REBOOT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_OFF_ZERO,  (void *) &_auto_reboot,      NULL, { .int_range = { 0, 0, 1000}}  },
@@ -427,11 +429,15 @@ static void showSPIFFS()
 
 
 #if WITH_SD
-    bool myIOTDevice::initSDCard()
+    void myIOTDevice::restartSDCard()
     {
-        if (!m_sd_started)
-            m_sd_started = SD.begin();
-        return m_sd_started;
+        initSDCard();
+        showSDCard();
+    }
+
+    void myIOTDevice::initSDCard()
+    {
+        m_sd_started = SD.begin();
     }
 
     void myIOTDevice::showSDCard()
