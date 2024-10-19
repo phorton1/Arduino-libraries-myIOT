@@ -41,15 +41,9 @@
 
 
 #include "myIOTDataLog.h"
-
-#if WITH_SD
-// the rest of this file!
-
 #include "myIOTDevice.h"
 #include "myIOTLog.h"
 #include "myIOTWebServer.h"
-// #include <FS.h>
-
 
 #define DEBUG_ADD			0
 #define DEBUG_SEND_DATA		1
@@ -74,14 +68,6 @@ myIOTDataLog::myIOTDataLog(
 	m_rec_size = (1 + m_num_cols) * sizeof(uint32_t);
 }
 
-
-String myIOTDataLog::dataFilename()
-{
-	String filename = "/";
-	filename += m_name;
-	filename += ".datalog";
-	return filename;
-}
 
 void myIOTDataLog::dbg_rec(logRecord_t rec)
 {
@@ -115,45 +101,55 @@ void myIOTDataLog::dbg_rec(logRecord_t rec)
 // addRecord()
 //---------------------------------------------------
 
-bool myIOTDataLog::addRecord(const logRecord_t rec)
-{
-	*rec = time(NULL);
-	if (*rec < ILLEGAL_DT)
+#if WITH_SD
+
+	String myIOTDataLog::dataFilename()
 	{
-		String stime = timeToString(*rec);
-		LOGE("attempt to call myIOTDataLog::addRecord(%d) at bad time(%s)",*rec,stime.c_str());
-		return false;
+		String filename = "/";
+		filename += m_name;
+		filename += ".datalog";
+		return filename;
 	}
 
-	String filename = dataFilename();
-	File file = SD.open(filename, FILE_APPEND);
-	if (!file)
+	bool myIOTDataLog::addRecord(const logRecord_t rec)
 	{
-		LOGE("myIOTDataLog::addRecord() could not open %s for appending",filename.c_str());
-		return false;
-	}
+		*rec = time(NULL);
+		if (*rec < ILLEGAL_DT)
+		{
+			String stime = timeToString(*rec);
+			LOGE("attempt to call myIOTDataLog::addRecord(%d) at bad time(%s)",*rec,stime.c_str());
+			return false;
+		}
 
-	uint32_t size = file.size();
-#if DEBUG_ADD
-	int num_recs = size / m_rec_size;
-	LOGD("myIOTDataLog::addRecord(%d) at ",num_recs + 1,size);
-	#if DEBUG_ADD > 1
-		dbg_rec(rec);
+		String filename = dataFilename();
+		File file = SD.open(filename, FILE_APPEND);
+		if (!file)
+		{
+			LOGE("myIOTDataLog::addRecord() could not open %s for appending",filename.c_str());
+			return false;
+		}
+
+		uint32_t size = file.size();
+	#if DEBUG_ADD
+		int num_recs = size / m_rec_size;
+		LOGD("myIOTDataLog::addRecord(%d) at ",num_recs + 1,size);
+		#if DEBUG_ADD > 1
+			dbg_rec(rec);
+		#endif
 	#endif
-#endif
 
-	bool retval = true;
-	int bytes = file.write((uint8_t *)rec,m_rec_size);
-	if (bytes != m_rec_size)
-	{
-		LOGE("myIOTDataLog::addRecord() Error appending(%d/%d) bytes at %d in %s",bytes,m_rec_size,size,filename.c_str());
-		retval = false;
+		bool retval = true;
+		int bytes = file.write((uint8_t *)rec,m_rec_size);
+		if (bytes != m_rec_size)
+		{
+			LOGE("myIOTDataLog::addRecord() Error appending(%d/%d) bytes at %d in %s",bytes,m_rec_size,size,filename.c_str());
+			retval = false;
+		}
+
+		file.close();
+		return retval;
 	}
-
-	file.close();
-	return retval;
-}
-
+#endif 	// WITH_SD
 
 
 //-----------------------------
@@ -278,8 +274,6 @@ String myIOTDataLog::getChartHTML(
 
 
 
-
-
 //-----------------------------------------
 // getChartHeader()
 //-----------------------------------------
@@ -342,264 +336,264 @@ String myIOTDataLog::getChartHeader()
 // backwards SD file iterator
 //================================================
 
-bool startSDBackwards(SDBackwards_t *iter)
-{
-	iter->done = true;
-	iter->read_pos = 0;
-	iter->buf_idx = -1;
+#if WITH_SD
 
-	if (iter->dbg_level > 1)
-		LOGD("startSDBackwards(%s) rec_size(%d) buf_size(%d)",
-			 iter->filename, iter->rec_size, iter->buf_size);
+	bool startSDBackwards(SDBackwards_t *iter)
+	{
+		iter->done = true;
+		iter->read_pos = 0;
+		iter->buf_idx = -1;
 
-	int num_file_recs = 0;
-	if (!SD.exists(iter->filename))
-	{
-		LOGW("missing %s",iter->filename);
-	}
-	else
-	{
-		iter->file = SD.open(iter->filename, FILE_READ);
-		if (!iter->file)
-		{
-			LOGE("Could not open %s for reading",iter->filename);
-			return false;
-		}
-		uint32_t size = iter->file.size();
-		if (!size)
-		{
-			LOGW("empty %s",iter->filename);
-		}
-		else if (size % iter->rec_size)
-		{
-			LOGE("%s size(%d) is not a multiple of rec_size(%d)",iter->filename,size,iter->rec_size);
-			iter->file.close();
-			return false;
-		}
-		num_file_recs = size / iter->rec_size;
 		if (iter->dbg_level > 1)
-			LOGD("file size=%d  num_file_recs=%d",size,num_file_recs);
-	}
+			LOGD("startSDBackwards(%s) rec_size(%d) buf_size(%d)",
+				 iter->filename, iter->rec_size, iter->buf_size);
 
-	if (num_file_recs > 0)
-	{
-		iter->done = false;
-		iter->read_pos = iter->file.size();	// Initial read position
-		if (iter->dbg_level > 1)
-			LOGD("initial read_pos=%d",iter->read_pos,num_file_recs);
-	}
-
-	// we are setup for the fist iteration
-
-	if (iter->dbg_level > 1)
-		LOGD("startSDBackwards(%s) returning done(%d)",iter->filename,iter->done);
-
-	return true;
-
-}   // startSDBackwards()
-
-
-
-uint8_t *getSDBackwards(SDBackwards_t *iter, int *num_recs)
-	// returns record(s), but only as many as the client
-	// callback has verified that it wanted
-{
-	*num_recs = 0;
-
-	if (iter->done)
-		return NULL;
-
-	if (iter->dbg_level>2)
-		LOGD("getSDBackwards() idx(%d) read_pos(%d)",iter->buf_idx,iter->read_pos);
-
-	if (iter->buf_idx < 0)  // buffer exhausted
-	{
-		if (iter->read_pos == 0)
+		int num_file_recs = 0;
+		if (!SD.exists(iter->filename))
 		{
-			if (iter->dbg_level > 1)
-				LOGD("           END OF FILE");
-			iter->done = 1;
-			return NULL;
-		}
-
-		int read_bytes = iter->buf_size;
-		if (iter->read_pos < read_bytes)
-		{
-			read_bytes = iter->read_pos;
-			iter->read_pos = 0;
+			LOGW("missing %s",iter->filename);
 		}
 		else
-			iter->read_pos -= read_bytes;
-
-		if (iter->dbg_level > 1)
-			LOGD("seeking to file_offset(%d)",iter->read_pos);
-
-		if (!iter->file.seek(iter->read_pos))
 		{
-			LOGE("Could not seek to byte %d", iter->read_pos);
-			iter->file.close();
-			return NULL;
-		}
-
-		if (iter->dbg_level > 1)
-			LOGD("    reading %d bytes at file_offset(%d)",read_bytes,iter->read_pos);
-
-		uint32_t bytes = iter->file.read(iter->buffer, read_bytes);
-		if (bytes != read_bytes)
-		{
-			LOGE("Error reading (%d/%d) at read_pos=%d", bytes,read_bytes,iter->read_pos);
-			iter->file.close();
-			return NULL;
-		}
-
-		iter->num_buf_recs = read_bytes / iter->rec_size;
-		iter->buf_idx = iter->num_buf_recs - 1;
-
-		if (iter->dbg_level > 1)
-			LOGD("    buf_recs=%d idx=%d",iter->num_buf_recs,iter->buf_idx);
-
-	}   // new buffer succesfully read
-
-	if (iter->chunked)
-	{
-		uint8_t *retval = NULL;
-		bool condition = true;
-		while (condition && iter->buf_idx >= 0)
-		{
-			uint8_t *rec = iter->buffer + (iter->rec_size * iter->buf_idx--);
-			condition = iter->record_fxn(iter->client_data,rec);
-			if (condition)
+			iter->file = SD.open(iter->filename, FILE_READ);
+			if (!iter->file)
 			{
-				(*num_recs)++;
-				retval = rec;
+				LOGE("Could not open %s for reading",iter->filename);
+				return false;
 			}
+			uint32_t size = iter->file.size();
+			if (!size)
+			{
+				LOGW("empty %s",iter->filename);
+			}
+			else if (size % iter->rec_size)
+			{
+				LOGE("%s size(%d) is not a multiple of rec_size(%d)",iter->filename,size,iter->rec_size);
+				iter->file.close();
+				return false;
+			}
+			num_file_recs = size / iter->rec_size;
+			if (iter->dbg_level > 1)
+				LOGD("file size=%d  num_file_recs=%d",size,num_file_recs);
 		}
 
-		if (!condition)
+		if (num_file_recs > 0)
 		{
+			iter->done = false;
+			iter->read_pos = iter->file.size();	// Initial read position
 			if (iter->dbg_level > 1)
-				LOGD("iteration ended by condition at buf_idx(%d)",iter->buf_idx);
-			iter->done = 1;
-			iter->file.close();
+				LOGD("initial read_pos=%d",iter->read_pos,num_file_recs);
 		}
+
+		// we are setup for the fist iteration
 
 		if (iter->dbg_level > 1)
-			LOGD("getSDBackwards(chunked) returning %d records at index %d",*num_recs,iter->buf_idx + 1);
-		return retval;
-	}
-	else
-	{
-		*num_recs = 1;
-		uint8_t *rec = iter->buffer + (iter->rec_size * iter->buf_idx--);
-		bool condition = iter->record_fxn(iter->client_data,rec);
-		if (condition)
-			return rec;
-	}
+			LOGD("startSDBackwards(%s) returning done(%d)",iter->filename,iter->done);
 
-	// iteration ended by user condition
-
-	iter->done = 1;
-	iter->file.close();
-	return NULL;
-}
-
-
-
-
-//-----------------------------------------
-// sendChartData()
-//-----------------------------------------
-// There is a lot of debugging in this routine,
-// Upto 4, normally DEBUG_SEND_DATA==1 or so
-//
-// Usually single instance, debugging of static method
-// uses global for multiple instances
-
-int g_debug_send_data = 1;
-
-
-bool chartDataCondition(uint32_t cutoff, uint8_t *rec)
-{
-	uint32_t ts = *((uint32_t *) rec);
-	if (ts >= cutoff)
 		return true;
 
-	if (g_debug_send_data)
+	}   // startSDBackwards()
+
+
+
+	uint8_t *getSDBackwards(SDBackwards_t *iter, int *num_recs)
+		// returns record(s), but only as many as the client
+		// callback has verified that it wanted
 	{
-		String dt1 = timeToString(ts);
-		String dt2 = timeToString(cutoff);
-		LOGD("    chartDataCondition(FALSE) at %s < %s",dt1.c_str(),dt2.c_str());
-	}
-	return false;
-}
+		*num_recs = 0;
 
+		if (iter->done)
+			return NULL;
 
-String myIOTDataLog::sendChartData(uint32_t secs)
-{
-	#define BASE_BUF_SIZE	1024
+		if (iter->dbg_level>2)
+			LOGD("getSDBackwards() idx(%d) read_pos(%d)",iter->buf_idx,iter->read_pos);
 
-	String filename = dataFilename();
-	uint32_t cutoff = secs ? time(NULL) - secs : 0;
-
-	// pick bufsize > 512 that will hold even number of records
-
-	int buf_size = ((BASE_BUF_SIZE + m_rec_size-1) / m_rec_size) * m_rec_size;
-	uint8_t stack_buffer[buf_size];
-
-	g_debug_send_data = m_debug_send_data;
-	
-	if (m_debug_send_data)
-	{
-		String dbg_tm = timeToString(cutoff);
-		LOGI("sendChartData(%d) since %s from %s",secs,secs?dbg_tm.c_str():"forever",filename.c_str());
-		if (m_debug_send_data > 1)
-			LOGD("buf_size(%d) cutoff=(%d)",buf_size,cutoff);
-	}
-
-	// initialize iterator struct
-
-	SDBackwards_t iter;
-	iter.chunked        = 1;
-	iter.client_data    = cutoff;
-	iter.filename       = filename.c_str();
-	iter.rec_size       = m_rec_size;
-	iter.record_fxn     = chartDataCondition;
-	iter.buffer         = stack_buffer;                 // an even multiple of rec_size
-	iter.buf_size       = buf_size;
-	iter.dbg_level      = m_debug_send_data;              // 0..2
-
-	if (!startSDBackwards(&iter))
-		return "";
-
-    if (!myiot_web_server->startBinaryResponse("application/octet-stream", CONTENT_LENGTH_UNKNOWN))
-		return "";
-
-	int sent = 0;
-	int num_file_recs = iter.file ? iter.file.size() / m_rec_size : 0;
-
-	int num_recs;
-	uint8_t *base_rec = getSDBackwards(&iter,&num_recs);
-	while (num_recs)
-	{
-		sent += num_recs;
-		if (!myiot_web_server->writeBinaryData((const char*)base_rec, num_recs * m_rec_size))
+		if (iter->buf_idx < 0)  // buffer exhausted
 		{
-			if (iter.file)
-				iter.file.close();
-			return "";
+			if (iter->read_pos == 0)
+			{
+				if (iter->dbg_level > 1)
+					LOGD("           END OF FILE");
+				iter->done = 1;
+				return NULL;
+			}
+
+			int read_bytes = iter->buf_size;
+			if (iter->read_pos < read_bytes)
+			{
+				read_bytes = iter->read_pos;
+				iter->read_pos = 0;
+			}
+			else
+				iter->read_pos -= read_bytes;
+
+			if (iter->dbg_level > 1)
+				LOGD("seeking to file_offset(%d)",iter->read_pos);
+
+			if (!iter->file.seek(iter->read_pos))
+			{
+				LOGE("Could not seek to byte %d", iter->read_pos);
+				iter->file.close();
+				return NULL;
+			}
+
+			if (iter->dbg_level > 1)
+				LOGD("    reading %d bytes at file_offset(%d)",read_bytes,iter->read_pos);
+
+			uint32_t bytes = iter->file.read(iter->buffer, read_bytes);
+			if (bytes != read_bytes)
+			{
+				LOGE("Error reading (%d/%d) at read_pos=%d", bytes,read_bytes,iter->read_pos);
+				iter->file.close();
+				return NULL;
+			}
+
+			iter->num_buf_recs = read_bytes / iter->rec_size;
+			iter->buf_idx = iter->num_buf_recs - 1;
+
+			if (iter->dbg_level > 1)
+				LOGD("    buf_recs=%d idx=%d",iter->num_buf_recs,iter->buf_idx);
+
+		}   // new buffer succesfully read
+
+		if (iter->chunked)
+		{
+			uint8_t *retval = NULL;
+			bool condition = true;
+			while (condition && iter->buf_idx >= 0)
+			{
+				uint8_t *rec = iter->buffer + (iter->rec_size * iter->buf_idx--);
+				condition = iter->record_fxn(iter->client_data,rec);
+				if (condition)
+				{
+					(*num_recs)++;
+					retval = rec;
+				}
+			}
+
+			if (!condition)
+			{
+				if (iter->dbg_level > 1)
+					LOGD("iteration ended by condition at buf_idx(%d)",iter->buf_idx);
+				iter->done = 1;
+				iter->file.close();
+			}
+
+			if (iter->dbg_level > 1)
+				LOGD("getSDBackwards(chunked) returning %d records at index %d",*num_recs,iter->buf_idx + 1);
+			return retval;
 		}
-		base_rec = getSDBackwards(&iter,&num_recs);
+		else
+		{
+			*num_recs = 1;
+			uint8_t *rec = iter->buffer + (iter->rec_size * iter->buf_idx--);
+			bool condition = iter->record_fxn(iter->client_data,rec);
+			if (condition)
+				return rec;
+		}
+
+		// iteration ended by user condition
+
+		iter->done = 1;
+		iter->file.close();
+		return NULL;
 	}
 
-	if (m_debug_send_data)
+
+
+
+	//-----------------------------------------
+	// sendChartData()
+	//-----------------------------------------
+	// There is a lot of debugging in this routine,
+	// Upto 4, normally DEBUG_SEND_DATA==1 or so
+	//
+	// Usually single instance, debugging of static method
+	// uses global for multiple instances
+
+	int g_debug_send_data = 1;
+
+
+	bool chartDataCondition(uint32_t cutoff, uint8_t *rec)
 	{
-		LOGD("    sendChartData() sent %d/%d records",sent,num_file_recs);
+		uint32_t ts = *((uint32_t *) rec);
+		if (ts >= cutoff)
+			return true;
+
+		if (g_debug_send_data)
+		{
+			String dt1 = timeToString(ts);
+			String dt2 = timeToString(cutoff);
+			LOGD("    chartDataCondition(FALSE) at %s < %s",dt1.c_str(),dt2.c_str());
+		}
+		return false;
 	}
 
-	return RESPONSE_HANDLED;
-}
 
+	String myIOTDataLog::sendChartData(uint32_t secs)
+	{
+		#define BASE_BUF_SIZE	1024
 
+		String filename = dataFilename();
+		uint32_t cutoff = secs ? time(NULL) - secs : 0;
+
+		// pick bufsize > 512 that will hold even number of records
+
+		int buf_size = ((BASE_BUF_SIZE + m_rec_size-1) / m_rec_size) * m_rec_size;
+		uint8_t stack_buffer[buf_size];
+
+		g_debug_send_data = m_debug_send_data;
+
+		if (m_debug_send_data)
+		{
+			String dbg_tm = timeToString(cutoff);
+			LOGI("sendChartData(%d) since %s from %s",secs,secs?dbg_tm.c_str():"forever",filename.c_str());
+			if (m_debug_send_data > 1)
+				LOGD("buf_size(%d) cutoff=(%d)",buf_size,cutoff);
+		}
+
+		// initialize iterator struct
+
+		SDBackwards_t iter;
+		iter.chunked        = 1;
+		iter.client_data    = cutoff;
+		iter.filename       = filename.c_str();
+		iter.rec_size       = m_rec_size;
+		iter.record_fxn     = chartDataCondition;
+		iter.buffer         = stack_buffer;                 // an even multiple of rec_size
+		iter.buf_size       = buf_size;
+		iter.dbg_level      = m_debug_send_data;              // 0..2
+
+		if (!startSDBackwards(&iter))
+			return "";
+
+		if (!myiot_web_server->startBinaryResponse("application/octet-stream", CONTENT_LENGTH_UNKNOWN))
+			return "";
+
+		int sent = 0;
+		int num_file_recs = iter.file ? iter.file.size() / m_rec_size : 0;
+
+		int num_recs;
+		uint8_t *base_rec = getSDBackwards(&iter,&num_recs);
+		while (num_recs)
+		{
+			sent += num_recs;
+			if (!myiot_web_server->writeBinaryData((const char*)base_rec, num_recs * m_rec_size))
+			{
+				if (iter.file)
+					iter.file.close();
+				return "";
+			}
+			base_rec = getSDBackwards(&iter,&num_recs);
+		}
+
+		if (m_debug_send_data)
+		{
+			LOGD("    sendChartData() sent %d/%d records",sent,num_file_recs);
+		}
+
+		return RESPONSE_HANDLED;
+	}
 
 #endif	// WITH_SD
 

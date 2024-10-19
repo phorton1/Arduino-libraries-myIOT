@@ -72,8 +72,9 @@ static valueIdType device_items[] = {
     ID_STA_PASS,
 
     ID_DEGREE_TYPE,
+#if WITH_SD
     ID_RESTART_SD,
-
+#endif
     ID_DEBUG_LEVEL,
     ID_LOG_LEVEL,
     ID_LOG_COLORS,
@@ -172,7 +173,10 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_LAST_BOOT,     VALUE_TYPE_TIME,       VALUE_STORE_PUB,       VALUE_STYLE_READONLY,   (void *) &_device_last_boot, },
     { ID_UPTIME,        VALUE_TYPE_INT,        VALUE_STORE_PUB,       VALUE_STYLE_HIST_TIME,  (void *) &_device_uptime,   NULL, { .int_range = { 0, DEVICE_MIN_INT, DEVICE_MAX_INT}}  },
     { ID_RESET_COUNT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,  { .int_range = { 0, 0, DEVICE_MAX_INT}}  },
+
+#if WITH_SD
     { ID_RESTART_SD,    VALUE_TYPE_COMMAND,    VALUE_STORE_SUB,       VALUE_STYLE_VERIFY,     NULL,                       (void *) restartSDCard },
+#endif
 
 #if WITH_AUTO_REBOOT
     { ID_AUTO_REBOOT,   VALUE_TYPE_INT,        VALUE_STORE_PREF,      VALUE_STYLE_OFF_ZERO,  (void *) &_auto_reboot,      NULL, { .int_range = { 0, 0, 1000}}  },
