@@ -110,14 +110,31 @@ myTempSensor::myTempSensor(int one_wire_pin) :
 // static utilties
 //-------------------------------
 
+static const char *tsenseErrStr(int err)
+{
+	switch (err)
+	{
+		case TSENSE_ERROR_NO_DEVICES	: return "NO_DEVICES";
+		case TSENSE_ERROR_OFFLINE		: return "OFFLINE";
+		case TSENSE_ERROR_EMPTY_DATA	: return "EMPTY_DATA";
+		case TSENSE_ERROR_BAD_ADDR		: return "BAD_ADDR";
+		case TSENSE_ERROR_BAD_CRC		: return "BAD_CRC";
+		case TSENSE_ERROR_BAD_CONFIG	: return "BAD_CONFIG";
+		case TSENSE_ERROR_PENDING		: return "PENDING";
+	}
+	return "UNKNOWN";
+}
+
+
 static String addrToStr(const uint8_t *addr)
 {
-	String rslt;
+	String rslt = "";
 	for (int i=0; i<8; i++)
 	{
-		static char buf[3];
-		sprintf(buf,"%02X",addr[i]);
-		rslt += buf;
+		String hex = String(addr[i],HEX);
+		if (hex.length() == 1)
+			hex = "0" + hex;
+		rslt += hex;
 	}
 	return rslt;
 }
@@ -125,15 +142,15 @@ static String addrToStr(const uint8_t *addr)
 
 static uint8_t hexDigitValue(char c)
 {
-	if (c >= 'A' && c < 'F')
+	if (c >= 'A' && c <= 'F')
 		return (c - 'A' + 10);
 	return c - '0';
 }
 
 
-static void strToAddr(uint8_t *addr, String str_addr)
+static void strToAddr(uint8_t *addr, const char *saddr)
 {
-	const char *ptr = str_addr.c_str();
+	const char *ptr = saddr;
 	for (int i=0; i<8; i++)
 	{
 		addr[i] =
@@ -143,7 +160,7 @@ static void strToAddr(uint8_t *addr, String str_addr)
 
 	#if DEBUG_ADDR
 		LOGD("strToAddr(%s)=0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X",
-			 str_addr.c_str(),
+			 saddr,
 			 addr[0],
 			 addr[1],
 			 addr[2],
@@ -161,7 +178,7 @@ static int findKnownSensor(const uint8_t *addr)
 	for (int i=0; i<NUM_KNOWN_SENSORS; i++)
 	{
 		uint8_t known_addr[8];
-		strToAddr(known_addr, String(KNOWN_SENSORS[i]));
+		strToAddr(known_addr, KNOWN_SENSORS[i]);
 		if (!memcmp(addr,known_addr,8))
 			return i+1;
 	}
@@ -175,7 +192,7 @@ static int findKnownSensor(const uint8_t *addr)
 // implementation
 //-----------------------------
 
-int16_t calculateRaw(const uint8_t *addr, const uint8_t* scratchPad)
+static int16_t calculateRaw(const uint8_t *addr, const uint8_t* scratchPad)
 	// returns fixed-point temperature, scaling factor 2^-7
 {
 	int16_t raw =
@@ -252,7 +269,7 @@ int myTempSensor::init()
 
 	if (!m_last_error && !num_found)
 		tsenseError(TSENSE_ERROR_NO_DEVICES,NULL);
-	
+
 	measure();
 	proc_leave();
 
@@ -293,16 +310,16 @@ int myTempSensor::measure()
 
 
 
-float myTempSensor::getDegreesC(String str_addr)
+float myTempSensor::getDegreesC(const char *saddr)
 {
 #if DEBUG_SENSE
-	LOGD("getDegreesC(%s)",str_addr.c_str());
+	LOGD("getDegreesC(%s)",saddr));
 #endif
 
 	m_last_error = 0;
 
 	uint8_t addr[8];
-	strToAddr(addr,str_addr);
+	strToAddr(addr,saddr);
 	if (pending())
 	{
 		tsenseError(TSENSE_ERROR_PENDING,addr);
@@ -324,7 +341,11 @@ float myTempSensor::getDegreesC(String str_addr)
 
 int myTempSensor::tsenseError(int err_code, const uint8_t *addr)
 {
-	LOGE("TSENSE_ERROR(%d) addr(%s)",err_code,addr?addrToStr(addr).c_str():"");
+	LOGE("TSENSE_ERROR(%d,%s)%s%s",
+		 err_code,
+		 tsenseErrStr(err_code),
+		 addr ? " addr=" : "",
+		 addr ? addrToStr(addr).c_str() : "");
 	m_last_error = err_code;
 	return err_code;
 }

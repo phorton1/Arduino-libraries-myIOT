@@ -80,7 +80,7 @@ public:
 		// Starts a measurement on all devices on the bus.
 		// Sets the m_pending timer.
 
-	float getDegreesC(String str_addr);
+	float getDegreesC(const char *saddr);
 		// Return the temperature for a given sensor
 		// or TEMPERATURE_ERROR if pending or any problems
 	int getLastError() { return m_last_error; }
