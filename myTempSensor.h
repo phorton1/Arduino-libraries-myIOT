@@ -86,6 +86,10 @@ public:
 	int getLastError() { return m_last_error; }
 		// call if any method fails
 
+	static const char *errString(int err);
+		// return a string for the error code
+
+
 private:
 
 	uint32_t m_pending;

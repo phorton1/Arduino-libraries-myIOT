@@ -110,7 +110,8 @@ myTempSensor::myTempSensor(int one_wire_pin) :
 // static utilties
 //-------------------------------
 
-static const char *tsenseErrStr(int err)
+// static
+const char *myTempSensor::errString(int err)
 {
 	switch (err)
 	{
@@ -343,7 +344,7 @@ int myTempSensor::tsenseError(int err_code, const uint8_t *addr)
 {
 	LOGE("TSENSE_ERROR(%d,%s)%s%s",
 		 err_code,
-		 tsenseErrStr(err_code),
+		 errString(err_code),
 		 addr ? " addr=" : "",
 		 addr ? addrToStr(addr).c_str() : "");
 	m_last_error = err_code;
