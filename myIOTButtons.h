@@ -50,7 +50,7 @@ class myIOTButtons
 
 
 
-extern myIOTButtons ui_buttons;
+extern myIOTButtons iot_buttons;
 
 
     

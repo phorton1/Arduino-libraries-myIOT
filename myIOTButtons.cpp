@@ -23,7 +23,7 @@
     // handles debouncing too ..
 
 
-myIOTButtons ui_buttons;
+myIOTButtons iot_buttons;
 
 
 myIOTButtons::myIOTButtons()
