@@ -1,5 +1,5 @@
 //---------------------------------------------
-// myTempSensor.h
+// myIOTTempSensor.h
 //---------------------------------------------
 // My interface to DS18B20 temperature sensors, based
 // on original DallasTemperature Arduino library.
@@ -58,11 +58,11 @@
 #define TSENSE_ERROR_PENDING		7
 
 
-class myTempSensor
+class myIOTTempSensor
 {
 public:
 
-	myTempSensor(int one_wire_pin);
+	myIOTTempSensor(int one_wire_pin);
 
 	int init();
 		// returns TSENSE_OK or reports error and returns error code
@@ -113,11 +113,11 @@ private:
 // For convenience, tSense.cpp enumerates all the DS18B20's
 // I have purchased and displays their position in init().
 
-extern const char *MY_TSENSOR_01;
-extern const char *MY_TSENSOR_02;
-extern const char *MY_TSENSOR_03;
-extern const char *MY_TSENSOR_04;
-extern const char *MY_TSENSOR_05;
+extern const char *IOT_TSENSOR_01;
+extern const char *IOT_TSENSOR_02;
+extern const char *IOT_TSENSOR_03;
+extern const char *IOT_TSENSOR_04;
+extern const char *IOT_TSENSOR_05;
 
 
 

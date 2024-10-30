@@ -1,5 +1,5 @@
 //---------------------------------------------
-// myTempSensor.cpp
+// myIOTTempSensor.cpp
 //---------------------------------------------
 // Implements my generic interface to DS18B20 temperature sensors.
 // and serves as a registry of all DS18B20 that I have purchased and
@@ -17,7 +17,7 @@
 //		anecdotally on the web.
 // So I rewrote it for me.
 
-#include "myTempSensor.h"
+#include "myIOTTempSensor.h"
 #include "myIOTLog.h"
 #include <OneWire.h>
 
@@ -80,25 +80,25 @@ const ScratchPad  empty_pad = {0,0,0,0,0,0,0,0,0};
 // static stuff
 //-------------------------------------------
 
-const char *MY_TSENSOR_01 = "289608A19D230B89";
-const char *MY_TSENSOR_02 = "28D38090C3230657";
-const char *MY_TSENSOR_03 = "283A0FE0C0230941";
-const char *MY_TSENSOR_04 = "2866130A9E230B2E";
-const char *MY_TSENSOR_05 = "286081DBC0230915";
+const char *IOT_TSENSOR_01 = "289608A19D230B89";
+const char *IOT_TSENSOR_02 = "28D38090C3230657";
+const char *IOT_TSENSOR_03 = "283A0FE0C0230941";
+const char *IOT_TSENSOR_04 = "2866130A9E230B2E";
+const char *IOT_TSENSOR_05 = "286081DBC0230915";
 
 
 static const char *KNOWN_SENSORS[] = {
-	MY_TSENSOR_01,
-	MY_TSENSOR_02,
-	MY_TSENSOR_03,
-	MY_TSENSOR_04,
-    MY_TSENSOR_05,
+	IOT_TSENSOR_01,
+	IOT_TSENSOR_02,
+	IOT_TSENSOR_03,
+	IOT_TSENSOR_04,
+    IOT_TSENSOR_05,
 };
 
 #define NUM_KNOWN_SENSORS		(sizeof(KNOWN_SENSORS)/sizeof(uint8_t *))
 
 
-myTempSensor::myTempSensor(int one_wire_pin) :
+myIOTTempSensor::myIOTTempSensor(int one_wire_pin) :
 	m_pending(0),
 	m_last_error(0)
 {
@@ -111,7 +111,7 @@ myTempSensor::myTempSensor(int one_wire_pin) :
 //-------------------------------
 
 // static
-const char *myTempSensor::errString(int err)
+const char *myIOTTempSensor::errString(int err)
 {
 	switch (err)
 	{
@@ -225,10 +225,10 @@ static int16_t calculateRaw(const uint8_t *addr, const uint8_t* scratchPad)
 // requires a reboot if the fake compressor feature
 // is entiredly turned on or off
 
-int myTempSensor::init()
+int myIOTTempSensor::init()
 	// return 0 or an error number
 {
-	LOGD("myTempSensor::init()",0);
+	LOGD("myIOTTempSensor::init()",0);
 	proc_entry();
 
 	m_last_error = 0;
@@ -279,7 +279,7 @@ int myTempSensor::init()
 }
 
 
-bool myTempSensor::pending()
+bool myIOTTempSensor::pending()
 {
 	if (m_pending && millis() - m_pending > PENDING_TIMEOUT)
 		m_pending = 0;
@@ -288,7 +288,7 @@ bool myTempSensor::pending()
 
 
 
-int myTempSensor::measure()
+int myIOTTempSensor::measure()
 	// Reports an error and returns false if a measurement is pending.
 	// Reports an error and returns false on any oneWire errors.
 	// Starts a measurement on all devices on the bus.
@@ -311,7 +311,7 @@ int myTempSensor::measure()
 
 
 
-float myTempSensor::getDegreesC(const char *saddr)
+float myIOTTempSensor::getDegreesC(const char *saddr)
 {
 #if DEBUG_SENSE
 	LOGD("getDegreesC(%s)",saddr));
@@ -340,7 +340,7 @@ float myTempSensor::getDegreesC(const char *saddr)
 // private
 //-------------------------------------------------
 
-int myTempSensor::tsenseError(int err_code, const uint8_t *addr)
+int myIOTTempSensor::tsenseError(int err_code, const uint8_t *addr)
 {
 	LOGE("TSENSE_ERROR(%d,%s)%s%s",
 		 err_code,
@@ -352,7 +352,7 @@ int myTempSensor::tsenseError(int err_code, const uint8_t *addr)
 }
 
 
-int myTempSensor::getResolution(const uint8_t *addr)
+int myIOTTempSensor::getResolution(const uint8_t *addr)
 {
 	// DS1820 and DS18S20 have no resolution configuration register
 	if (addr[DSROM_FAMILY] == DS18S20MODEL)
@@ -383,7 +383,7 @@ int myTempSensor::getResolution(const uint8_t *addr)
 
 
 
-int myTempSensor::readScratchPad(const uint8_t *addr, uint8_t *scratch_pad)
+int myIOTTempSensor::readScratchPad(const uint8_t *addr, uint8_t *scratch_pad)
 {
 	if (!one_wire.reset())
 		return tsenseError(TSENSE_ERROR_NO_DEVICES,addr);
