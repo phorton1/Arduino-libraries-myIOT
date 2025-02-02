@@ -502,12 +502,14 @@ void myIOTDevice::setup()
     // correct time will show as soon as possible,
     // esp in logfile
 
-    extern const char *tzString(IOT_TIMEZONE tz);
-    uint32_t tz_enum = my_iot_device->getEnum(ID_TIMEZONE);
-    const char *tz_string = tzString(static_cast<IOT_TIMEZONE>(tz_enum));
-    setenv("TZ",tz_string,1);
-    tzset();
-
+    #if WITH_NTP
+        extern const char *tzString(IOT_TIMEZONE tz);
+        uint32_t tz_enum = my_iot_device->getEnum(ID_TIMEZONE);
+        const char *tz_string = tzString(static_cast<IOT_TIMEZONE>(tz_enum));
+        setenv("TZ",tz_string,1);
+        tzset();
+    #endif
+    
     // show banner AFTER SD card inited so it shows in logfile
 
     #if WITH_SD
