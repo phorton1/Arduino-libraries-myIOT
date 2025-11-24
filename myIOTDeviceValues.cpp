@@ -1,8 +1,6 @@
 //--------------------------
-// myIOTValue.h
+// myIOTDeviceValues.cpp
 //--------------------------
-
-#pragma once
 
 #include "myIOTDevice.h"
 #include "myIOTLog.h"
