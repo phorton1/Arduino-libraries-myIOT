@@ -292,13 +292,15 @@ void addJsonVal(String &rslt, const char *field, String val, bool quoted, bool c
 }
 
 
-String myIOTDataLog::getChartHeader()
+String myIOTDataLog::getChartHeader(const String *series_colors /*=NULL*/)
 {
 	String rslt = "{\n";
 
 	addJsonVal(rslt,"name",m_name,true,true,true);
 	addJsonVal(rslt,"num_cols",String(m_num_cols),false,true,true);
-
+	if (series_colors)
+		addJsonVal(rslt,"series_colors",*series_colors,false,true,true);
+	
 	rslt += "\"col\":[\n";
 
 	for (int i=0; i<m_num_cols; i++)

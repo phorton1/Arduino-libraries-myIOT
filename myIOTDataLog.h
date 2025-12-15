@@ -75,8 +75,12 @@ public:
 		//		/custom/chart_header/m_name and
 		//		/custom/chart_data/m_name?secs=NNNAssumes
 		// Assumes the page already includes iotChart.js and dependencies.
-	String getChartHeader();
-		// returns a String containing the json used to create a chart
+	String getChartHeader(const String *series_colors=NULL);
+		// returns a String containing the json used to create a chart.
+		// You may optionally pass in a String containing series colors
+		// that look like this '["#4bb2c5", "#EAA228", "#c5b47f", "#579575"]'
+		// including the brackets and internal double quotes
+
 	#if WITH_SD
 		String sendChartData(uint32_t secs);
 			// sends the chart data to the myiot_web_server and returns
