@@ -292,7 +292,7 @@ void addJsonVal(String &rslt, const char *field, String val, bool quoted, bool c
 }
 
 
-String myIOTDataLog::getChartHeader(const String *series_colors /*=NULL*/)
+String myIOTDataLog::getChartHeader(const String *series_colors /*=NULL*/,  int supports_incremental_update /*=0*/)
 {
 	String rslt = "{\n";
 
@@ -300,6 +300,9 @@ String myIOTDataLog::getChartHeader(const String *series_colors /*=NULL*/)
 	addJsonVal(rslt,"num_cols",String(m_num_cols),false,true,true);
 	if (series_colors)
 		addJsonVal(rslt,"series_colors",*series_colors,false,true,true);
+	if (supports_incremental_update)
+		addJsonVal(rslt,"incremental_update",String(supports_incremental_update),false,true,true);
+
 	
 	rslt += "\"col\":[\n";
 
