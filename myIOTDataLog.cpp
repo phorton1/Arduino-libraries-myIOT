@@ -184,11 +184,11 @@ String myIOTDataLog::getChartHTML(
 	rslt += "<div id='_chart' class='iot_chart'></div>\n";
 
 	rslt += "&nbsp;&nbsp;&nbsp;\n";
-	rslt += "<button id='_update_button' onclick='doChart()' disabled>Update</button>\n";
+	rslt += "<button id='_update_button' onclick='onUpdate()' disabled>Update</button>\n";
 
 	rslt += "&nbsp;&nbsp;&nbsp;\n";
 	rslt += "<label for='_chart_period'>Chart Period:</label>\n";
-	rslt += "<select name='period' id='_chart_period' onchange='get_chart_data()'>\n";
+	rslt += "<select name='period' id='_chart_period' onchange='onPeriodChanged()'>\n";
 	rslt += addSelectOption(period,0,"All");
 	rslt += addSelectOption(period,60,"Minute");
 	rslt += addSelectOption(period,900,"15 Minutes");
@@ -207,14 +207,14 @@ String myIOTDataLog::getChartHTML(
 
 	rslt += "&nbsp;&nbsp;&nbsp;\n";
 	rslt += "<label for='_refresh_interval'>Refresh Interval:</label>\n";
-	rslt += "<input id='_refresh_interval' type='number' value='0' min='0' max='999999' onchange='refreshIntervalChanged()'>\n";
+	rslt += "<input id='_refresh_interval' type='number' value='0' min='0' max='999999' onchange='onRefreshChanged()'>\n";
 
 	if (with_degrees)
 	{
 		uint32_t degree_type = my_iot_device->getEnum(ID_DEGREE_TYPE);
 		rslt += "&nbsp;&nbsp;&nbsp;\n";
 		rslt += "<label for='_degree_select'>Degree Type:</label>\n";
-		rslt += "<select name='_degree_select' id='_degree_select' onchange='onDegreeSelect()'>\n";
+		rslt += "<select name='_degree_select' id='_degree_select' onchange='onDegreesChanged()'>\n";
 		rslt += addSelectOption(degree_type,0,"Centigrade");
 		rslt += addSelectOption(degree_type,1,"Farenheit");
 		rslt += "</select>\n";
