@@ -64,27 +64,11 @@ public:
 	// chart support
 	//----------------------------------------
 	
-	String getChartHTML(int height, int width, int period, int refresh);
-		// Returns <div> that contains the chart_div, update button,
-		// 		period selection, and refresh interval inputs.
-		// Currently height and width are fixed; might go away.
-		// Period and refresh are used as defaults for a new browsr load,
-		// 		but browsers tend to keep values through reloads
-		// Uses urls that must be handled by client by calling getChartHeader()
-		// 		and sendChartData() from their onCustomLink() method:
-		//		/custom/chart_header/m_name and
-		//		/custom/chart_data/m_name?secs=NNNAssumes
-		// Assumes the page already includes iotChart.js and dependencies.
-	String getChartHeader(const String *series_colors=NULL, int supports_incremental_update=0);
-		// returns a String containing the json used to create a chart.
-		// You may optionally pass in a String containing series colors
-		// that look like this '["#4bb2c5", "#EAA228", "#c5b47f", "#579575"]'
-		// including the brackets and internal double quotes
+	String getChartHTML(int period, bool with_degrees=0);
+	String getChartHeader(const String *series_colors=NULL);
 
 	#if WITH_SD
-		String sendChartData(uint32_t secs);
-			// sends the chart data to the myiot_web_server and returns
-			// RESPONSE_HANDLED. 0 means all.
+		String sendChartData(uint32_t secs_or_dt,bool since=false);
 	#endif
 
 private:

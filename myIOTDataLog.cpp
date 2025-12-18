@@ -155,14 +155,6 @@ void myIOTDataLog::dbg_rec(logRecord_t rec)
 //-----------------------------
 // getChartHTML()
 //-----------------------------
-// produces
-//		<div id='fridgeData'>
-//			<div id='fridgetData_chart'></div>
-//			<button id=fridgeData_plot_button'>PLOT</button>
-//			<select id=fridgeData_period_select'>
-//			<input type='number' id='fridgeData_refresh_interval'>
-// and uses urls that must be handled by client.
-
 
 String addSelectOption(int default_value,int value, const char *name)
 {
@@ -179,61 +171,24 @@ String addSelectOption(int default_value,int value, const char *name)
 	
 
 String myIOTDataLog::getChartHTML(
-	int height,
-	int width,
 	int period,
-	int refresh)
+	bool with_degrees /*=false*/)
 {
-	LOGD("myIOTDataLog::getChartHTML(%d,%d,%d,%d)",height,width,period,refresh);
+	LOGD("myIOTDataLog::getChartHTML(%d,%d)",period,with_degrees);
 
-	String rslt = "<div id='";
-	rslt += m_name;
-	rslt += "'>\n";
-
-	rslt += "<div id='";
-	rslt += m_name;
-	rslt += "_chart'";
-	rslt += " class='iot_chart'";
+	String rslt = "";
 	
-	#if 0
-		rslt += " height='";
-		rslt += String(height);
-		rslt += "px' width'";
-		rslt += String(width);
-		rslt += "px'";
-	#elif 0
-		rslt += " height:'100%' width:'100%'";
-	#elif 0
-		rslt += " style='height:100%;width:100%;'";
-	#elif 0
-		rslt += " style='height:";
-		rslt += String(height);
-		rslt += "px;width:";
-		rslt += String(width);
-		rslt += "px;'";
-	#endif
-	rslt += ">";
-	rslt += "</div>\n";
+	rslt += "<div id='";
+	rslt += + m_name;
+	rslt += "'>\n";
+	rslt += "<div id='_chart' class='iot_chart'></div>\n";
 
 	rslt += "&nbsp;&nbsp;&nbsp;\n";
-
-	rslt += "<button id='";
-	rslt += m_name;
-	rslt += "_update_button";
-	rslt += "' onclick=\"doChart('";
-	rslt += m_name;
-	rslt += "')\" disabled>Update</button>\n";
+	rslt += "<button id='_update_button' onclick='doChart()' disabled>Update</button>\n";
 
 	rslt += "&nbsp;&nbsp;&nbsp;\n";
-
-	rslt += "<label for='";
-	rslt += m_name;
-	rslt += "_chart_period'>Chart Period:</label>\n";
-	rslt += "<select name='period' id='";
-	rslt += m_name;
-	rslt += "_chart_period' onchange=\"get_chart_data('";
-	rslt += m_name;
-	rslt += "')\">\n";
+	rslt += "<label for='_chart_period'>Chart Period:</label>\n";
+	rslt += "<select name='period' id='_chart_period' onchange='get_chart_data()'>\n";
 	rslt += addSelectOption(period,0,"All");
 	rslt += addSelectOption(period,60,"Minute");
 	rslt += addSelectOption(period,900,"15 Minutes");
@@ -251,25 +206,22 @@ String myIOTDataLog::getChartHTML(
 	rslt += "</select>\n";
 
 	rslt += "&nbsp;&nbsp;&nbsp;\n";
+	rslt += "<label for='_refresh_interval'>Refresh Interval:</label>\n";
+	rslt += "<input id='_refresh_interval' type='number' value='0' min='0' max='999999' onchange='refreshIntervalChanged()'>\n";
 
-	rslt += "<label for='";
-	rslt += m_name;
-	rslt += "_refresh_interval'>Refresh Interval:</label>\n";
-	rslt += "<input id='";
-	rslt += m_name;
-	rslt += "_refresh_interval' type='number' value='";
-	rslt += String(refresh);
-	rslt += "' min='0' max='999999'>\n";
-
-	rslt += "</div>\n";
-
-	#if 0
-		Serial.print("myIOTDataLog::getChartHTML()=");
-		Serial.println(rslt.c_str());
-	#endif
+	if (with_degrees)
+	{
+		uint32_t degree_type = my_iot_device->getEnum(ID_DEGREE_TYPE);
+		rslt += "&nbsp;&nbsp;&nbsp;\n";
+		rslt += "<label for='_degree_select'>Degree Type:</label>\n";
+		rslt += "<select name='_degree_select' id='_degree_select' onchange='onDegreeSelect()'>\n";
+		rslt += addSelectOption(degree_type,0,"Centigrade");
+		rslt += addSelectOption(degree_type,1,"Farenheit");
+		rslt += "</select>\n";
+	}
 	
+	rslt += "</div>\n";
 	return rslt;
-
 }
 
 
@@ -292,7 +244,7 @@ void addJsonVal(String &rslt, const char *field, String val, bool quoted, bool c
 }
 
 
-String myIOTDataLog::getChartHeader(const String *series_colors /*=NULL*/,  int supports_incremental_update /*=0*/)
+String myIOTDataLog::getChartHeader(const String *series_colors /*=NULL*/)
 {
 	String rslt = "{\n";
 
@@ -300,9 +252,6 @@ String myIOTDataLog::getChartHeader(const String *series_colors /*=NULL*/,  int 
 	addJsonVal(rslt,"num_cols",String(m_num_cols),false,true,true);
 	if (series_colors)
 		addJsonVal(rslt,"series_colors",*series_colors,false,true,true);
-	if (supports_incremental_update)
-		addJsonVal(rslt,"incremental_update",String(supports_incremental_update),false,true,true);
-
 	
 	rslt += "\"col\":[\n";
 
@@ -535,12 +484,13 @@ String myIOTDataLog::getChartHeader(const String *series_colors /*=NULL*/,  int 
 	}
 
 
-	String myIOTDataLog::sendChartData(uint32_t secs)
+	String myIOTDataLog::sendChartData(uint32_t secs_or_dt,bool since/*=false*/)
 	{
 		#define BASE_BUF_SIZE	1024
 
 		String filename = dataFilename();
-		uint32_t cutoff = secs ? time(NULL) - secs : 0;
+		uint32_t cutoff = secs_or_dt ?
+			since ? secs_or_dt : time(NULL) - secs_or_dt : 0;
 
 		// pick bufsize > 512 that will hold even number of records
 
@@ -552,7 +502,11 @@ String myIOTDataLog::getChartHeader(const String *series_colors /*=NULL*/,  int 
 		if (m_debug_send_data)
 		{
 			String dbg_tm = timeToString(cutoff);
-			LOGI("sendChartData(%d) since %s from %s",secs,secs?dbg_tm.c_str():"forever",filename.c_str());
+			LOGI("sendChartData(%d,%d) since(%s) from %s",
+				 secs_or_dt,
+				 since,
+				 secs_or_dt?dbg_tm.c_str():"forever",
+				 filename.c_str());
 			if (m_debug_send_data > 1)
 				LOGD("buf_size(%d) cutoff=(%d)",buf_size,cutoff);
 		}
