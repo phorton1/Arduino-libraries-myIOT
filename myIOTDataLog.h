@@ -64,8 +64,7 @@ public:
 	// chart support
 	//----------------------------------------
 	
-	String getChartHTML(int period, bool with_degrees=0);
-	String getChartHeader(const String *series_colors=NULL);
+	String getChartHeader(int period, int with_degrees, const String *series_colors=NULL);
 
 	#if WITH_SD
 		String sendChartData(uint32_t secs_or_dt,bool since=false);

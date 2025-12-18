@@ -152,79 +152,6 @@ void myIOTDataLog::dbg_rec(logRecord_t rec)
 #endif 	// WITH_SD
 
 
-//-----------------------------
-// getChartHTML()
-//-----------------------------
-
-String addSelectOption(int default_value,int value, const char *name)
-{
-	String rslt = "<option value='";
-	rslt += String(value);
-	rslt += "'";
-	if (value == default_value)
-		rslt += " selected='selected'";
-	rslt += ">";
-	rslt += name;
-	rslt += "</option>\n";
-	return rslt;
-}
-	
-
-String myIOTDataLog::getChartHTML(
-	int period,
-	bool with_degrees /*=false*/)
-{
-	LOGD("myIOTDataLog::getChartHTML(%d,%d)",period,with_degrees);
-
-	String rslt = "";
-	
-	rslt += "<div id='";
-	rslt += + m_name;
-	rslt += "'>\n";
-	rslt += "<div id='_chart' class='iot_chart'></div>\n";
-
-	rslt += "&nbsp;&nbsp;&nbsp;\n";
-	rslt += "<button id='_update_button' onclick='onUpdate()' disabled>Update</button>\n";
-
-	rslt += "&nbsp;&nbsp;&nbsp;\n";
-	rslt += "<label for='_chart_period'>Chart Period:</label>\n";
-	rslt += "<select name='period' id='_chart_period' onchange='onPeriodChanged()'>\n";
-	rslt += addSelectOption(period,0,"All");
-	rslt += addSelectOption(period,60,"Minute");
-	rslt += addSelectOption(period,900,"15 Minutes");
-	rslt += addSelectOption(period,3600,"Hour");
-	rslt += addSelectOption(period,10800,"3 Hours");
-	rslt += addSelectOption(period,43200,"12 Hours");
-	rslt += addSelectOption(period,86400,"Day");
-	rslt += addSelectOption(period,172800,"2 Days");
-	rslt += addSelectOption(period,259200,"3 Days");
-	rslt += addSelectOption(period,604800,"Week");
-	rslt += addSelectOption(period,2592000,"Month");
-	rslt += addSelectOption(period,5184000,"2 Months");
-	rslt += addSelectOption(period,7776000,"3 Months");
-	rslt += addSelectOption(period,31536000,"Year");
-	rslt += "</select>\n";
-
-	rslt += "&nbsp;&nbsp;&nbsp;\n";
-	rslt += "<label for='_refresh_interval'>Refresh Interval:</label>\n";
-	rslt += "<input id='_refresh_interval' type='number' value='0' min='0' max='999999' onchange='onRefreshChanged()'>\n";
-
-	if (with_degrees)
-	{
-		uint32_t degree_type = my_iot_device->getEnum(ID_DEGREE_TYPE);
-		rslt += "&nbsp;&nbsp;&nbsp;\n";
-		rslt += "<label for='_degree_select'>Degree Type:</label>\n";
-		rslt += "<select name='_degree_select' id='_degree_select' onchange='onDegreesChanged()'>\n";
-		rslt += addSelectOption(degree_type,0,"Centigrade");
-		rslt += addSelectOption(degree_type,1,"Farenheit");
-		rslt += "</select>\n";
-	}
-	
-	rslt += "</div>\n";
-	return rslt;
-}
-
-
 
 //-----------------------------------------
 // getChartHeader()
@@ -244,12 +171,15 @@ void addJsonVal(String &rslt, const char *field, String val, bool quoted, bool c
 }
 
 
-String myIOTDataLog::getChartHeader(const String *series_colors /*=NULL*/)
+String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *series_colors /*=NULL*/)
 {
 	String rslt = "{\n";
 
 	addJsonVal(rslt,"name",m_name,true,true,true);
 	addJsonVal(rslt,"num_cols",String(m_num_cols),false,true,true);
+	addJsonVal(rslt,"default_period",String(period),false,true,true);
+	addJsonVal(rslt,"with_degrees",String(with_degrees),false,true,true);
+
 	if (series_colors)
 		addJsonVal(rslt,"series_colors",*series_colors,false,true,true);
 	
