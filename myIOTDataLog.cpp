@@ -179,6 +179,11 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 	addJsonVal(rslt,"num_cols",String(m_num_cols),false,true,true);
 	addJsonVal(rslt,"default_period",String(period),false,true,true);
 	addJsonVal(rslt,"with_degrees",String(with_degrees),false,true,true);
+	if (with_degrees)
+	{
+		uint32_t degree_type = my_iot_device->getEnum(ID_DEGREE_TYPE);
+		addJsonVal(rslt,"degree_type",String(degree_type),false,true,true);
+	}
 
 	if (series_colors)
 		addJsonVal(rslt,"series_colors",*series_colors,false,true,true);
