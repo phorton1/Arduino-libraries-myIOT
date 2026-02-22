@@ -566,12 +566,45 @@ void myIOTHTTP::handle_request()
         File file = SPIFFS.open(path, FILE_READ);
         if (file)
         {
-            #if 1
-                if (cache_arg.equals("1"))
-                    web_server.sendHeader("Cache-Control","max-age=31536000, immutable",false);
-            #endif
-            
-            web_server.streamFile(file, getContentType(path));
+            // special paths of SMALL files that do $arg_name$ substitution
+            // of any arguments from the query ..
+            //
+            // This is used with the device specific chart link(s) for each
+            // chart that a device has, to serve a chart-specific chart.html
+            // file that sets a global "data_name" variable which will then
+            // be passed back in the custom links for chart_header and chart_data,
+            // allowing a device to have more than one chart link based on
+            // multiple different dataLogs.
+            //
+            // This change is upward compatible:
+            // Devices that only have a single chart associated with them
+            // need not respond specially in their onCustomLink methods.
+
+            if (path.equals("/chart.html"))
+            {
+                String html = file.readString();
+
+                // expand all $arg$ tokens using web_server.args()
+                int n = web_server.args();
+                for (int i = 0; i < n; i++)
+                {
+                    String name = web_server.argName(i);
+                    String value = web_server.arg(i);
+                    String token = "$" + name + "$";
+                    html.replace(token, value);
+                }
+
+                web_server.send(200, getContentType(path), html);
+            }
+            else
+            {
+                #if 1
+                    if (cache_arg.equals("1"))
+                        web_server.sendHeader("Cache-Control","max-age=31536000, immutable",false);
+                #endif
+
+                web_server.streamFile(file, getContentType(path));
+            }
             file.close();
             return;
         }
