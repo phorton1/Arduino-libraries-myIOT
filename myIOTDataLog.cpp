@@ -47,6 +47,8 @@
 
 #define DEBUG_ADD			0
 #define DEBUG_SEND_DATA		1
+#define DEBUG_ITER			0
+
 
 #define ILLEGAL_DT		1726764664		// 2024-09-19  11:51:04a Panama Local Time
 
@@ -55,45 +57,139 @@
 // implementation
 //------------------------------------
 
-myIOTDataLog::myIOTDataLog(
-		const char *name,
-		int num_cols,
-		logColumn_t *cols,
-		int debug_send_data /* = 1*/ ) :
-	m_name(name),
-	m_num_cols(num_cols),
-	m_col(cols),
-	m_debug_send_data(debug_send_data)
+static int colSize(uint32_t typ)
 {
-	m_rec_size = (1 + m_num_cols) * sizeof(uint32_t);
+	if (typ == LOG_COL_TYPE_UINT8 ||
+		typ == LOG_COL_TYPE_UINT8x10 ||
+		typ == LOG_COL_TYPE_INT8 ||
+		typ == LOG_COL_TYPE_CENTIGRADE8)
+		return 1;
+	if (typ == LOG_COL_TYPE_UINT16 ||
+		typ == LOG_COL_TYPE_INT16 ||
+		typ == LOG_COL_TYPE_FLOAT16 ||
+		typ == LOG_COL_TYPE_CENTIGRADE16)
+		return 2;
+	// type == LOG_COL_TYPE_UINT32
+	// type == LOG_COL_TYPE_INT32
+	// type == LOG_COL_TYPE_FLOAT32
+	// type == LOG_COL_TYPE_CENTIGRADE32
+	return 4;
 }
 
 
-void myIOTDataLog::dbg_rec(logRecord_t rec)
+myIOTDataLog::myIOTDataLog(
+		const char *name,
+		int num_cols,
+		logColumn_t *cols) :
+	m_name(name),
+	m_num_cols(num_cols),
+	m_col(cols)
 {
-	String tm = timeToString(*rec);
-	LOGD("   dt(%u) = %s",*rec++,tm.c_str());
+	m_rec_size = 4;		// 4 for the dt
+	for (int i=0; i<num_cols; i++)
+	{
+		m_rec_size += colSize(cols[i].type);
+	}
+}
+
+
+
+static float decode_float16(uint16_t h)
+{
+    uint16_t s = (h & 0x8000) >> 15;
+    uint16_t e = (h & 0x7C00) >> 10;
+    uint16_t f = (h & 0x03FF);
+    if (e == 0)
+	{
+        if (f == 0)
+            return s ? -0.0f : 0.0f;
+        return (s ? -1.0f : 1.0f) * ldexpf((float)f, -24);
+    }
+    if (e == 31)
+	{
+        if (f != 0)
+            return NAN;
+        return s ? -INFINITY : INFINITY;
+    }
+    return (s ? -1.0f : 1.0f) * ldexpf((float)(f | 0x400), e - 25);
+}
+
+
+
+void myIOTDataLog::dbg_rec(const logRecord_t rec)
+{
+	String tm = timeToString(*((uint32_t *)rec));
+	LOGD("REC(%s)",tm.c_str());
+
+	int offset = 4;	// skip the dt
 	for (int i=0; i<m_num_cols; i++)
 	{
 		uint32_t col_type = m_col[i].type;
-		if (col_type == LOG_COL_TYPE_FLOAT ||
-			col_type == LOG_COL_TYPE_TEMPERATURE)
+
+		if (col_type == LOG_COL_TYPE_UINT16)
 		{
-			float float_val = *((float*)(rec++));
-			LOGD("   %-15s = %0.3f",m_col[i].name,float_val);
+			uint16_t val = *((uint16_t*)&rec[offset]);
+			offset += 2;
+			LOGD("   %-15s = %u",m_col[i].name,val);
+		}
+		else if (col_type == LOG_COL_TYPE_UINT8)
+		{
+			uint8_t val = *((uint8_t*)&rec[offset]);
+			offset += 1;
+			LOGD("   %-15s = %u",m_col[i].name,val);
+		}
+		else if (col_type == LOG_COL_TYPE_UINT8x10)
+		{
+			uint8_t val = *((uint8_t*)&rec[offset]);
+			offset += 1;
+			LOGD("   %-15s = %u",m_col[i].name,val*10);
 		}
 		else if (col_type == LOG_COL_TYPE_INT32)
-
 		{
-			int32_t int32_val = *((int32_t*)(rec++));
-			LOGD("   %-15s = %d",m_col[i].name,int32_val);
+			int32_t val = *((int32_t*)&rec[offset]);
+			offset += 4;
+			LOGD("   %-15s = %d",m_col[i].name,val);
 		}
-		else
+		else if (col_type == LOG_COL_TYPE_INT16)
 		{
-			LOGD("   %-15s = %d",m_col[i].name,*rec++);
+			int16_t val = *((int16_t*)&rec[offset]);
+			offset += 2;
+			LOGD("   %-15s = %d",m_col[i].name,val);
+		}
+		else if (col_type == LOG_COL_TYPE_INT8)
+		{
+			int8_t val = *((int8_t*)&rec[offset]);
+			offset += 2;
+			LOGD("   %-15s = %d",m_col[i].name,val);
+		}
+		else if (col_type == LOG_COL_TYPE_FLOAT32 ||
+				 col_type == LOG_COL_TYPE_CENTIGRADE32)
+		{
+			float val = *((float*)&rec[offset]);
+			offset += 4;
+			LOGD("   %-15s = %0.3f",m_col[i].name,val);
+		}
+		else if (col_type == LOG_COL_TYPE_FLOAT16 ||
+				 col_type == LOG_COL_TYPE_CENTIGRADE16)
+		{
+			uint16_t raw = *((uint16_t*)(&rec[offset]));
+			offset += 2;
+			float val = decode_float16(raw);
+			LOGD("   %-15s = %0.3f", m_col[i].name,val);
+ 		}
+		else if (col_type == LOG_COL_TYPE_CENTIGRADE8)
+		{
+			uint8_t val = *((uint8_t*)&rec[offset]);
+			offset += 1;
+			LOGD("   %-15s = %d",m_col[i].name,val-40);
+		}
+		else	// UINT32_t
+		{
+			uint32_t val = *((uint32_t*)&rec[offset]);
+			offset += 4;
+			LOGD("   %-15s = %u",m_col[i].name,val);
 		}
 	}
-
 }
 
 
@@ -113,13 +209,14 @@ void myIOTDataLog::dbg_rec(logRecord_t rec)
 
 	bool myIOTDataLog::addRecord(const logRecord_t rec)
 	{
-		*rec = time(NULL);
-		if (*rec < ILLEGAL_DT)
+		uint32_t tm = time(NULL);
+		if (tm < ILLEGAL_DT)
 		{
-			String stime = timeToString(*rec);
-			LOGE("attempt to call myIOTDataLog::addRecord(%d) at bad time(%s)",*rec,stime.c_str());
+			String stime = timeToString(tm);
+			LOGE("attempt to call myIOTDataLog::addRecord(%d) at bad time(%s)",tm,stime.c_str());
 			return false;
 		}
+		*((uint32_t *)rec) = tm;
 
 		String filename = dataFilename();
 		File file = SD.open(filename, FILE_APPEND);
@@ -132,7 +229,11 @@ void myIOTDataLog::dbg_rec(logRecord_t rec)
 		uint32_t size = file.size();
 	#if DEBUG_ADD
 		int num_recs = size / m_rec_size;
-		LOGD("myIOTDataLog::addRecord(%d) at ",num_recs + 1,size);
+		LOGD("myIOTDataLog::addRecord() rec_size(%d) rec_num(%d)=file_size(%d) dt=%s",
+			 m_rec_size,
+			 num_recs + 1,
+			 size,
+			 timeToString(tm).c_str());
 		#if DEBUG_ADD > 1
 			dbg_rec(rec);
 		#endif
@@ -176,6 +277,7 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 	String rslt = "{\n";
 
 	addJsonVal(rslt,"name",m_name,true,true,true);
+	addJsonVal(rslt,"rec_size",String(m_rec_size),false,true,true);
 	addJsonVal(rslt,"num_cols",String(m_num_cols),false,true,true);
 	addJsonVal(rslt,"default_period",String(period),false,true,true);
 	addJsonVal(rslt,"with_degrees",String(with_degrees),false,true,true);
@@ -197,9 +299,17 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 
 		const logColumn_t *col = &m_col[i];
 		const char *str =
-			col->type == LOG_COL_TYPE_FLOAT ? "float" :
-			col->type == LOG_COL_TYPE_INT32 ? "int32_t" :
-			col->type == LOG_COL_TYPE_TEMPERATURE ? "temperature_t" :
+			col->type == LOG_COL_TYPE_UINT16		? "uint16_t" :
+			col->type == LOG_COL_TYPE_UINT8			? "uint8_t" :
+			col->type == LOG_COL_TYPE_UINT8x10		? "uint8x10_t" :
+			col->type == LOG_COL_TYPE_INT32			? "int32_t" :
+			col->type == LOG_COL_TYPE_INT16			? "int16_t" :
+			col->type == LOG_COL_TYPE_INT8			? "int8_t" :
+			col->type == LOG_COL_TYPE_FLOAT32		? "float32_t" :
+			col->type == LOG_COL_TYPE_FLOAT16		? "float16_t" :
+			col->type == LOG_COL_TYPE_CENTIGRADE32	? "centigrade32_t" :
+			col->type == LOG_COL_TYPE_CENTIGRADE16	? "centigrade16_t" :
+			col->type == LOG_COL_TYPE_CENTIGRADE8	? "centigrade8_t" :
 			"uint32_t";
 
 		addJsonVal(rslt,"name",col->name,							true,true,false);
@@ -233,10 +343,11 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 		iter->read_pos = 0;
 		iter->buf_idx = -1;
 
-		if (iter->dbg_level > 1)
+		#if DEBUG_ITER
 			LOGD("startSDBackwards(%s) rec_size(%d) buf_size(%d)",
 				 iter->filename, iter->rec_size, iter->buf_size);
-
+		#endif
+		
 		int num_file_recs = 0;
 		if (!SD.exists(iter->filename))
 		{
@@ -262,23 +373,26 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 				return false;
 			}
 			num_file_recs = size / iter->rec_size;
-			if (iter->dbg_level > 1)
+			#if DEBUG_ITER
 				LOGD("file size=%d  num_file_recs=%d",size,num_file_recs);
+			#endif
 		}
 
 		if (num_file_recs > 0)
 		{
 			iter->done = false;
 			iter->read_pos = iter->file.size();	// Initial read position
-			if (iter->dbg_level > 1)
+			#if DEBUG_ITER
 				LOGD("initial read_pos=%d",iter->read_pos,num_file_recs);
+			#endif
 		}
 
 		// we are setup for the fist iteration
 
-		if (iter->dbg_level > 1)
+		#if DEBUG_ITER
 			LOGD("startSDBackwards(%s) returning done(%d)",iter->filename,iter->done);
-
+		#endif
+		
 		return true;
 
 	}   // startSDBackwards()
@@ -294,15 +408,17 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 		if (iter->done)
 			return NULL;
 
-		if (iter->dbg_level>2)
+		#if DEBUG_ITER > 1
 			LOGD("getSDBackwards() idx(%d) read_pos(%d)",iter->buf_idx,iter->read_pos);
+		#endif
 
 		if (iter->buf_idx < 0)  // buffer exhausted
 		{
 			if (iter->read_pos == 0)
 			{
-				if (iter->dbg_level > 1)
+				#if DEBUG_ITER
 					LOGD("           END OF FILE");
+				#endif
 				iter->done = 1;
 				return NULL;
 			}
@@ -316,8 +432,9 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 			else
 				iter->read_pos -= read_bytes;
 
-			if (iter->dbg_level > 1)
+			#if DEBUG_ITER > 1
 				LOGD("seeking to file_offset(%d)",iter->read_pos);
+			#endif
 
 			if (!iter->file.seek(iter->read_pos))
 			{
@@ -326,8 +443,9 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 				return NULL;
 			}
 
-			if (iter->dbg_level > 1)
+			#if DEBUG_ITER > 1
 				LOGD("    reading %d bytes at file_offset(%d)",read_bytes,iter->read_pos);
+			#endif
 
 			uint32_t bytes = iter->file.read(iter->buffer, read_bytes);
 			if (bytes != read_bytes)
@@ -340,9 +458,10 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 			iter->num_buf_recs = read_bytes / iter->rec_size;
 			iter->buf_idx = iter->num_buf_recs - 1;
 
-			if (iter->dbg_level > 1)
+			#if DEBUG_ITER > 1
 				LOGD("    buf_recs=%d idx=%d",iter->num_buf_recs,iter->buf_idx);
-
+			#endif
+			
 		}   // new buffer succesfully read
 
 		if (iter->chunked)
@@ -362,14 +481,17 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 
 			if (!condition)
 			{
-				if (iter->dbg_level > 1)
+				#if DEBUG_ITER
 					LOGD("iteration ended by condition at buf_idx(%d)",iter->buf_idx);
+				#endif
 				iter->done = 1;
 				iter->file.close();
 			}
 
-			if (iter->dbg_level > 1)
+			#if DEBUG_ITER
 				LOGD("getSDBackwards(chunked) returning %d records at index %d",*num_recs,iter->buf_idx + 1);
+			#endif
+
 			return retval;
 		}
 		else
@@ -389,19 +511,11 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 	}
 
 
-
-
 	//-----------------------------------------
 	// sendChartData()
 	//-----------------------------------------
-	// There is a lot of debugging in this routine,
-	// Upto 4, normally DEBUG_SEND_DATA==1 or so
-	//
 	// Usually single instance, debugging of static method
 	// uses global for multiple instances
-
-	int g_debug_send_data = 1;
-
 
 	bool chartDataCondition(uint32_t cutoff, uint8_t *rec)
 	{
@@ -409,12 +523,13 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 		if (ts >= cutoff)
 			return true;
 
-		if (g_debug_send_data)
+		#if DEBUG_SEND_DATA>2
 		{
 			String dt1 = timeToString(ts);
 			String dt2 = timeToString(cutoff);
 			LOGD("    chartDataCondition(FALSE) at %s < %s",dt1.c_str(),dt2.c_str());
 		}
+		#endif
 		return false;
 	}
 
@@ -432,19 +547,18 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 		int buf_size = ((BASE_BUF_SIZE + m_rec_size-1) / m_rec_size) * m_rec_size;
 		uint8_t stack_buffer[buf_size];
 
-		g_debug_send_data = m_debug_send_data;
-
-		if (m_debug_send_data)
+		#if DEBUG_SEND_DATA
 		{
 			String dbg_tm = timeToString(cutoff);
-			LOGI("sendChartData(%d,%d) since(%s) from %s",
+			LOGI("sendChartData rec_size(%d) secs/dt(%d) since_bool(%d) since(%s) from %s",
+				 m_rec_size,
 				 secs_or_dt,
 				 since,
 				 secs_or_dt?dbg_tm.c_str():"forever",
 				 filename.c_str());
-			if (m_debug_send_data > 1)
-				LOGD("buf_size(%d) cutoff=(%d)",buf_size,cutoff);
+			LOGD("    buf_size(%d) cutoff=(%d)",buf_size,cutoff);
 		}
+		#endif
 
 		// initialize iterator struct
 
@@ -456,7 +570,6 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 		iter.record_fxn     = chartDataCondition;
 		iter.buffer         = stack_buffer;                 // an even multiple of rec_size
 		iter.buf_size       = buf_size;
-		iter.dbg_level      = m_debug_send_data;              // 0..2
 
 		if (!startSDBackwards(&iter))
 			return "";
@@ -468,23 +581,32 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 		int num_file_recs = iter.file ? iter.file.size() / m_rec_size : 0;
 
 		int num_recs;
-		uint8_t *base_rec = getSDBackwards(&iter,&num_recs);
+		uint8_t *rec_buf = getSDBackwards(&iter,&num_recs);
 		while (num_recs)
 		{
 			sent += num_recs;
-			if (!myiot_web_server->writeBinaryData((const char*)base_rec, num_recs * m_rec_size))
+
+			#if DEBUG_SEND_DATA > 1
+				int offset = 0;
+				for (int i=0; i<num_recs; i++)
+				{
+					dbg_rec(&rec_buf[i*m_rec_size]);
+				}
+			#endif
+
+			if (!myiot_web_server->writeBinaryData((const char*)rec_buf, num_recs * m_rec_size))
 			{
 				if (iter.file)
 					iter.file.close();
 				return "";
 			}
-			base_rec = getSDBackwards(&iter,&num_recs);
+
+			rec_buf = getSDBackwards(&iter,&num_recs);
 		}
 
-		if (m_debug_send_data)
-		{
+		#if DEBUG_SEND_DATA
 			LOGD("    sendChartData() sent %d/%d records",sent,num_file_recs);
-		}
+		#endif
 
 		return RESPONSE_HANDLED;
 	}

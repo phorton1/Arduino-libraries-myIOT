@@ -15,14 +15,27 @@
 
 
 #define DATA_COLS_MAX			20
+
 	// an arbitrary upper limit
-#define LOG_COL_TYPE_UINT32			0x00000001
-#define LOG_COL_TYPE_INT32			0x00000002
-#define LOG_COL_TYPE_FLOAT			0x00000004
-#define LOG_COL_TYPE_TEMPERATURE	0x00000008
-	// float in Centigrade. Clients can use the
-	// the DEGREE_TYPE to show according to use
-	// preferences.
+#define LOG_COL_TYPE_UINT32			0x00000001	// full unsigned 32 bit
+#define LOG_COL_TYPE_UINT16			0x00000002
+#define LOG_COL_TYPE_UINT8			0x00000004
+#define LOG_COL_TYPE_UINT8x10		0x00000008	// 0..2550 stored as 0..255
+
+#define LOG_COL_TYPE_INT32			0x00000010	// full signed 32 bit
+#define LOG_COL_TYPE_INT16			0x00000020	// full signed 32 bit
+#define LOG_COL_TYPE_INT8			0x00000040	// full signed 32 bit
+
+#define LOG_COL_TYPE_FLOAT32		0x00000100	// full 32 bit float (unused)
+#define LOG_COL_TYPE_FLOAT16		0x00000200	// 16 bit float (unused)
+
+// For the following the user can use the DEGREE_TYPE to show Centigrade vs Farenheit
+
+#define LOG_COL_TYPE_CENTIGRADE32	0x00001000	// full 32 bit float in Centigrade
+#define LOG_COL_TYPE_CENTIGRADE16	0x00002000	// 16 bit float in Centigrade
+#define LOG_COL_TYPE_CENTIGRADE8	0x00004000	// integer Centigrade bias 40; i.e. 40=0C; min=-40C; max=215C,
+
+
 
 // the tick_intervals are used to determine the
 // min/max and num_ticks in the javascript.
@@ -31,25 +44,19 @@ typedef struct {
 	const char *name;			// provided by caller
 	uint32_t type;				// provided by caller
 	float tick_interval;		// provided by caller
-	// float min;
-	// float max;
 } logColumn_t;
 
 
-typedef uint32_t *logRecord_t;
-	// an array of uint32_t's where the 0th the dt
-	// in unix format followed by num_cols 32bit values
-
+typedef uint8_t *logRecord_t;
 
 class myIOTDataLog
 {
 public:
 
 	myIOTDataLog(
-		const char *name,
-		int num_cols,
-		logColumn_t *cols,
-		int debug_send_data = 1);
+		const char *name,				// a unique name for this dataLog
+		int num_cols,					// number of columns and
+		logColumn_t *cols);				// column types determine m_rec_size
 
 	#if WITH_SD
 		String dataFilename();
@@ -74,15 +81,11 @@ private:
 
 	const char *m_name;
 	int m_num_cols;
-	int m_rec_size;
 	logColumn_t *m_col;
 
-	int m_debug_send_data;
-		// client is allowed to set m_debug_send_data=0
-		// to turn off debugging, or higher numbers to
-		// see more
-	void dbg_rec(logRecord_t rec);
+	int m_rec_size;
 
+	void dbg_rec(const logRecord_t rec);
 };
 
 
@@ -108,7 +111,6 @@ private:
 		SDBackardsCB record_fxn;	// client callback funtion
 		uint8_t *buffer;            // the buffer
 		uint32_t buf_size;			// MUST be an even multiple of rec_size
-		int dbg_level;           	// 0..4
 
 		// membets maintained through an iteration
 
