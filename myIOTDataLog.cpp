@@ -44,6 +44,8 @@
 #include "myIOTDevice.h"
 #include "myIOTLog.h"
 #include "myIOTWebServer.h"
+#include "myIotTempSensor.h"
+
 
 #define DEBUG_ADD			0
 #define DEBUG_SEND_DATA		1
@@ -66,8 +68,7 @@ static int colSize(uint32_t typ)
 		return 1;
 	if (typ == LOG_COL_TYPE_UINT16 ||
 		typ == LOG_COL_TYPE_INT16 ||
-		typ == LOG_COL_TYPE_FLOAT16 ||
-		typ == LOG_COL_TYPE_CENTIGRADE16)
+		typ == LOG_COL_TYPE_CENTIGRADE_RAW)
 		return 2;
 	// type == LOG_COL_TYPE_UINT32
 	// type == LOG_COL_TYPE_INT32
@@ -92,27 +93,6 @@ myIOTDataLog::myIOTDataLog(
 	}
 }
 
-
-
-static float decode_float16(uint16_t h)
-{
-    uint16_t s = (h & 0x8000) >> 15;
-    uint16_t e = (h & 0x7C00) >> 10;
-    uint16_t f = (h & 0x03FF);
-    if (e == 0)
-	{
-        if (f == 0)
-            return s ? -0.0f : 0.0f;
-        return (s ? -1.0f : 1.0f) * ldexpf((float)f, -24);
-    }
-    if (e == 31)
-	{
-        if (f != 0)
-            return NAN;
-        return s ? -INFINITY : INFINITY;
-    }
-    return (s ? -1.0f : 1.0f) * ldexpf((float)(f | 0x400), e - 25);
-}
 
 
 
@@ -169,13 +149,12 @@ void myIOTDataLog::dbg_rec(const logRecord_t rec)
 			offset += 4;
 			LOGD("   %-15s = %0.3f",m_col[i].name,val);
 		}
-		else if (col_type == LOG_COL_TYPE_FLOAT16 ||
-				 col_type == LOG_COL_TYPE_CENTIGRADE16)
+		else if (col_type == LOG_COL_TYPE_CENTIGRADE_RAW)
 		{
-			uint16_t raw = *((uint16_t*)(&rec[offset]));
+			int16_t raw = *((uint16_t*)(&rec[offset]));
 			offset += 2;
-			float val = decode_float16(raw);
-			LOGD("   %-15s = %0.3f", m_col[i].name,val);
+			float val = myIOTTempSensor::rawToDegreesC(raw);
+			LOGD("   %-15s = %0.1f", m_col[i].name,val);
  		}
 		else if (col_type == LOG_COL_TYPE_CENTIGRADE8)
 		{
@@ -299,17 +278,16 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 
 		const logColumn_t *col = &m_col[i];
 		const char *str =
-			col->type == LOG_COL_TYPE_UINT16		? "uint16_t" :
-			col->type == LOG_COL_TYPE_UINT8			? "uint8_t" :
-			col->type == LOG_COL_TYPE_UINT8x10		? "uint8x10_t" :
-			col->type == LOG_COL_TYPE_INT32			? "int32_t" :
-			col->type == LOG_COL_TYPE_INT16			? "int16_t" :
-			col->type == LOG_COL_TYPE_INT8			? "int8_t" :
-			col->type == LOG_COL_TYPE_FLOAT32		? "float32_t" :
-			col->type == LOG_COL_TYPE_FLOAT16		? "float16_t" :
-			col->type == LOG_COL_TYPE_CENTIGRADE32	? "centigrade32_t" :
-			col->type == LOG_COL_TYPE_CENTIGRADE16	? "centigrade16_t" :
-			col->type == LOG_COL_TYPE_CENTIGRADE8	? "centigrade8_t" :
+			col->type == LOG_COL_TYPE_UINT16			? "uint16_t" :
+			col->type == LOG_COL_TYPE_UINT8				? "uint8_t" :
+			col->type == LOG_COL_TYPE_UINT8x10			? "uint8x10_t" :
+			col->type == LOG_COL_TYPE_INT32				? "int32_t" :
+			col->type == LOG_COL_TYPE_INT16				? "int16_t" :
+			col->type == LOG_COL_TYPE_INT8				? "int8_t" :
+			col->type == LOG_COL_TYPE_FLOAT32			? "float32_t" :
+			col->type == LOG_COL_TYPE_CENTIGRADE32		? "centigrade32_t" :
+			col->type == LOG_COL_TYPE_CENTIGRADE_RAW	? "centigradeRaw_t" :
+			col->type == LOG_COL_TYPE_CENTIGRADE8		? "centigrade8_t" :
 			"uint32_t";
 
 		addJsonVal(rslt,"name",col->name,							true,true,false);

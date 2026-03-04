@@ -311,10 +311,11 @@ int myIOTTempSensor::measure()
 
 
 
-float myIOTTempSensor::getDegreesC(const char *saddr)
+
+int16_t myIOTTempSensor::getTemperatureRaw(const char *saddr)
 {
 #if DEBUG_SENSE
-	LOGD("getDegreesC(%s)",saddr));
+	LOGD("getTemperatureRaw(%s)",saddr));
 #endif
 
 	m_last_error = 0;
@@ -324,14 +325,35 @@ float myIOTTempSensor::getDegreesC(const char *saddr)
 	if (pending())
 	{
 		tsenseError(TSENSE_ERROR_PENDING,addr);
-		return TEMPERATURE_ERROR;
+		return TEMP_RAW_ERROR;
 	}
 	ScratchPad scratch_pad;
 	if (readScratchPad(addr, scratch_pad) != TSENSE_OK)
-		return TEMPERATURE_ERROR;
+		return TEMP_RAW_ERROR;
 	int raw = calculateRaw(addr,scratch_pad);
 	// C = RAW/128
+	return raw;
+}
+
+
+
+// static
+float myIOTTempSensor::rawToDegreesC(int16_t raw)
+{
+	if (raw == TEMP_RAW_ERROR)
+		return TEMPERATURE_ERROR;
+	// C = RAW/128
 	return (float) raw * 0.0078125f;
+}
+
+
+
+float myIOTTempSensor::getDegreesC(const char *saddr)
+{
+#if DEBUG_SENSE
+	LOGD("getDegreesC(%s)",saddr);
+#endif
+	return rawToDegreesC(getTemperatureRaw(saddr));
 }
 
 

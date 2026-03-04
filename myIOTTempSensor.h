@@ -40,8 +40,10 @@
 #include <Arduino.h>
 
 
-// Don't use the float if it >= TEMPERATURE_ERROR
+// Don't use the raw value if == TEMP_RAW_ERROR
+// or the float value if it >= TEMPERATURE_ERROR
 
+#define TEMP_RAW_ERROR			32767
 #define TEMPERATURE_ERROR  		10000.0
 	// the temperature returned if there are any problems
 	// during getDegreesC()
@@ -80,12 +82,19 @@ public:
 		// Starts a measurement on all devices on the bus.
 		// Sets the m_pending timer.
 
+	int16_t getTemperatureRaw(const char *saddr);
+		// return the raw C/128 temperature or
+		// TEMP_RAW_ERROR if pending or any problems
+	static float rawToDegreesC(int16_t raw);
+		// convert raw C/128 value to float
+		// or return TEMPERATURE_ERROR if raw==TEMP_RAW_ERROR
+	
 	float getDegreesC(const char *saddr);
 		// Return the temperature for a given sensor
 		// or TEMPERATURE_ERROR if pending or any problems
+
 	int getLastError() { return m_last_error; }
 		// call if any method fails
-
 	static const char *errString(int err);
 		// return a string for the error code
 

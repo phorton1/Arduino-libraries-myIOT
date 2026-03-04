@@ -27,12 +27,11 @@
 #define LOG_COL_TYPE_INT8			0x00000040	// full signed 32 bit
 
 #define LOG_COL_TYPE_FLOAT32		0x00000100	// full 32 bit float (unused)
-#define LOG_COL_TYPE_FLOAT16		0x00000200	// 16 bit float (unused)
 
 // For the following the user can use the DEGREE_TYPE to show Centigrade vs Farenheit
 
 #define LOG_COL_TYPE_CENTIGRADE32	0x00001000	// full 32 bit float in Centigrade
-#define LOG_COL_TYPE_CENTIGRADE16	0x00002000	// 16 bit float in Centigrade
+#define LOG_COL_TYPE_CENTIGRADE_RAW	0x00002000	// int16_t 16 bit Centigrade/128 (raw DS18B20 reading)
 #define LOG_COL_TYPE_CENTIGRADE8	0x00004000	// integer Centigrade bias 40; i.e. 40=0C; min=-40C; max=215C,
 
 
