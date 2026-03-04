@@ -51,7 +51,6 @@
 
 // wifi stuff
 
-#define ID_WIFI           "WIFI"
 #define ID_AP_PASS        "AP_PASS"
 #define ID_STA_SSID       "STA_SSID"
 #define ID_STA_PASS       "STA_PASS"
@@ -325,12 +324,6 @@ class myIOTDevice
         void addDerivedToolTips(const char **derived_tooltips, const char **extra_text=NULL);
 
     protected:
-
-        static void onChangeWifi(const myIOTValue *desc, bool val);
-        static bool _device_wifi;
-            // _device_wifi can be changed, and onChangeWifi(NULL,false/true)
-            // called to temporarily turn wifi on or off without actually
-            // changing the preference
 
         #if WITH_AUTO_REBOOT
             virtual bool okToAutoReboot()   { return 1; }

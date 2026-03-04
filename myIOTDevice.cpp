@@ -60,8 +60,6 @@
 static valueIdType device_items[] = {
     ID_REBOOT,
     ID_DEVICE_NAME,
-    ID_WIFI,
-    ID_SSDP,
     ID_DEVICE_IP,
 #if WITH_NTP
     ID_TIMEZONE,
@@ -70,6 +68,7 @@ static valueIdType device_items[] = {
     ID_AP_PASS,
     ID_STA_SSID,
     ID_STA_PASS,
+    ID_SSDP,
 
     ID_DEGREE_TYPE,
 #if WITH_SD
@@ -159,7 +158,6 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
 
     { ID_PLOT_DATA,     VALUE_TYPE_BOOL,       VALUE_STORE_PUB,       VALUE_STYLE_NONE,       (void *) &_plot_data,       NULL,   },
 
-    { ID_WIFI,          VALUE_TYPE_BOOL,       VALUE_STORE_PREF,      VALUE_STYLE_NONE,       (void *) &_device_wifi,     (void *) onChangeWifi, { .int_range = { DEFAULT_DEVICE_WIFI }} },
     { ID_AP_PASS,       VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   DEFAULT_AP_PASSWORD },
     { ID_STA_SSID,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_NONE,       NULL,                       NULL,   "" },
     { ID_STA_PASS,      VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   "" },
@@ -189,9 +187,8 @@ const valDescriptor myIOTDevice::m_base_descriptors[] =
     { ID_MQTT_PASS,     VALUE_TYPE_STRING,     VALUE_STORE_PREF,      VALUE_STYLE_PASSWORD,   NULL,                       NULL,   "1234" },
 #endif
 
-
-
 };
+
 
 #define NUM_BASE_VALUES (sizeof(m_base_descriptors)/sizeof(valDescriptor))
 
@@ -222,7 +219,6 @@ static const char *device_tooltips[] = {
     ID_AP_PASS          ,   "The <i>encrypted</i> <b>Password</b> for the <i>Access Point</i> when in AP mode",
     ID_STA_SSID         ,   "The <b>SSID</b> (name) of the WiFi network the device will attempt to connect to as a <i>Station</i>.  Setting this to <b>blank</b> will force the device into <i>AP</i> (Access Point) mode at the next <b>reboot</b>",
     ID_STA_PASS         ,   "The <i>encrypted</i> <b>Password</b> for connecting in <i>STA</i> (Station) mode",
-    ID_WIFI             ,   "Turns the device's <b>Wifi</b> on and off",
     ID_SSDP             ,   "Turns <b>SSDP</b> (Service Search and Discovery Protocol) on and off.  SSDP allows a device attached to Wifi in <i>Station mode</i> to be found by other devices on the LAN (Local Area Network). Examples include the <b>Network tab</b> in <i>Windows Explorer</i> on a <b>Windows</b> computer",
 
     ID_DEGREE_TYPE      ,   "Sets the default display of DS18B20 temperature values (VALUE_STYLE_TEMPERATURE)",
@@ -249,7 +245,6 @@ String myIOTDevice::_device_uuid;
 String myIOTDevice::_device_type = IOT_DEVICE;
 String myIOTDevice::_device_version = IOT_DEVICE_VERSION;
 String myIOTDevice::_device_url = DEFAULT_DEVICE_URL;
-bool myIOTDevice::_device_wifi = DEFAULT_DEVICE_WIFI;
 bool myIOTDevice::_device_ssdp = DEFAULT_DEVICE_SSDP;
 String myIOTDevice::_device_ip;
 
@@ -304,28 +299,6 @@ void myIOTDevice::addDerivedToolTips(const char **derived_tooltips, const char *
 {
     g_derived_tooltips = derived_tooltips;
     g_extra_text = extra_text;
-}
-
-// static
-void myIOTDevice::onChangeWifi(const myIOTValue *desc, bool val)
-{
-    LOGI("   onChangeWifi(%d)",val);
-    if (val)
-    {
-        my_iot_wifi.connect(
-            my_iot_device->getString(ID_STA_SSID),
-            my_iot_device->getString(ID_STA_PASS));
-        #if WITH_WS
-            my_web_sockets.begin();
-        #endif
-    }
-    else
-    {
-        #if WITH_WS
-            my_web_sockets.end();
-        #endif
-        my_iot_wifi.disconnect();
-    }
 }
 
 
@@ -529,7 +502,6 @@ void myIOTDevice::setup()
     LOGD("DEVICE_TYPE:    %s",_device_type.c_str());
     LOGD("DEVICE_VERSION: %s",_device_version.c_str());
     LOGD("DEVICE_UUID:    %s",_device_uuid.c_str());
-    LOGD("DEVICE_WIFI:    %d",_device_wifi);
 
     #if 0
         // value failure tests
@@ -584,37 +556,7 @@ void myIOTDevice::setup()
 
     showIncSetupProgress();         // 2
 
-    // I would like to change the system so that we consistently
-    // allow setup() and associated tasks run invariantly,
-    // eliminate unused loops() where there are tasks (with defines)
-    // and use a consistent onConnectStatusChanged() method, where there
-    // is a new mode IOT_CONNECT_OFF and IOT_CONNECT_ON is equal
-    // to the current IOT_CONNECT_NONE, and IOT_CONNECT_OFF encapsulates
-    // ID_WIFI except for the user event of turning it on or off.
-
     my_iot_wifi.setup();
-
-        // currently contains a call to connect() if WIFI=1
-        // would become my_iot_wifi.begin() if WIFI=1 and
-        // my_iot_wifi.end() if WIFI=0 AFTER all setup()
-        // methods and tasks are running.
-        //
-        // Then onChangeWifi() could just call begin() or
-        // end() appropriately, and my_iot_wifi, in turn,
-        // would call back with iotDevice:::onConnectStatusChanged()
-        // which would then propogate downwards through all
-        // objects.
-        //
-        // The loops() and tasks could then do nothing when
-        //
-        //
-        // HOWEVER it is probably better to turn off the services
-        // in a specific order BEFORE actually turnning the wifi
-        // off. Each sub device would then have to be responsible.
-        //
-        // simple:  my_iot_wifi calls onConnectStatusChanged()
-        // BEFORE disconnecting and AFTER connecting.
-
 
     showIncSetupProgress();         // 3 = last internal bilgeAlarm LED
 
@@ -1278,23 +1220,20 @@ void myIOTDevice::setPlotLegend(const char *comma_list)
 
 void myIOTDevice::loop()
 {
-    if (_device_wifi)
-    {
-        my_iot_wifi.loop();     // required
-        my_iot_http.loop();     // required
+    my_iot_wifi.loop();     // required
+    my_iot_http.loop();     // required
 
-        #if WITH_WS
-        #ifndef WS_TASK
-            my_web_sockets.loop();      // has a task
-        #endif
-        #endif
+    #if WITH_WS
+    #ifndef WS_TASK
+        my_web_sockets.loop();      // has a task
+    #endif
+    #endif
 
-        #if WITH_MQTT
-        #ifndef MQTT_TASK
-            my_iot_mqtt.loop();         // has a task
-        #endif
-        #endif
-    }
+    #if WITH_MQTT
+    #ifndef MQTT_TASK
+        my_iot_mqtt.loop();         // has a task
+    #endif
+    #endif
 
     #ifndef SERIAL_TASK
         myIOTSerial::loop();        // has a task

@@ -74,12 +74,9 @@ void myIOTWifi::setup()
         // trying it to keep from losing AP password
         // seems to help
 
-    if (my_iot_device->getBool(ID_WIFI))
-    {
-        connect(
-            my_iot_device->getString(ID_STA_SSID),
-            my_iot_device->getString(ID_STA_PASS));
-    }
+    connect(
+        my_iot_device->getString(ID_STA_SSID),
+        my_iot_device->getString(ID_STA_PASS));
 
     proc_leave();
     LOGD("myIOTServer::setup() finished");
@@ -282,7 +279,6 @@ void myIOTWifi::loop()
     else if (
         !ap_connection_count &&
         g_reconnect == 0 &&
-        my_iot_device->getBool(ID_WIFI) &&
         my_iot_device->getString(ID_STA_SSID) != "" &&
         WiFi.status() != WL_CONNECTED)
     {

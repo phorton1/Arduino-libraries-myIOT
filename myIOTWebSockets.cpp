@@ -80,8 +80,7 @@ void myIOTWebSockets::setup()
     proc_entry();
 
     m_web_sockets.onEvent(webSocketEvent);
-    if (my_iot_device->getBool(ID_WIFI))
-        begin();
+    begin();
 
     #ifdef WS_TASK
         // Must run on ESP32_CORE_ARDUINO==1
