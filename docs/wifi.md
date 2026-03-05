@@ -229,7 +229,7 @@ card, and allowing you to upload or delete OUTER LEVEL FILES
 only, will appear.
 
 The following window is from a subsequent project, the
-[bilgeAlarm](https://github.com/phorton1/Arduino-bilgeAlarm) that I created using this framework.
+[bilgeAlarm](https://github.com/phorton1/Arduino-boat-bilgeAlarm) that I created using this framework.
 
 ![webui5.jpg](images/webui5.jpg)
 

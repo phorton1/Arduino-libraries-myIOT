@@ -28,24 +28,6 @@ A weather station, for instance, might have floating point values for the temper
 and might be configurable to send emails at some period of time, or upon some condition (it's REALLY WINDY!!). Or a home security
 system might have things like passwords and overrides, and you might be interested in keeping a log of all activity on an SD card.
 
-The two projects I have implemented using this archecture so far are a
-[**bilge pump alarm**](https://github.com/phorton1/Arduino-bilgeAlarm) for my boat, and a laser cut
-[**wooden geared clock**](https://github.com/phorton1/Arduino-theClock) that uses the ESP32 to drive an electromagetic pendulum.
-
-On the bilgeAlarm there are a number of values that can be seen, like "when did the bilge pump last run?",
-along with a number of parameters that can be set, including the ability to turn the pump(s) on remotely, and/or
-define conditions under which the (car-alarm!!!) alarm will sound .. like "if the pump runs more than 5 times in
-an hour, more than 20 times in a day, or for more than 30 seconds, trigger an alarm!". In fact the bilgeAlarm,
-in addition to keeping a logfile of all activity, keeps a history of every time it has run, and how long it ran
-each time.
-
-That information is useful when trying to determine if there are problems on the boat, and/or if they have been corrected.
-
-On the clock I use the myIOT framework to allow me to view statistics on how well the clock is performing (how many milliseconds,
-ahead or behind, has it run overall, and per tick) along with the ability to parameterize the controller, setting the duration,
-and strength of the pulses sent to the electromagnet, and to modify the values for the PID controller that tries to keep the
-clock running precisely.
-
 
 In any event, you will begin by thinking about, and implementing the **values** used by, and presented by, your device.
 

@@ -44,16 +44,6 @@ This readme is broken up into several sub-pages.
 how to derive from and extend existing **classes** and are generally familiar with
 the **Arduino IDE** devlopement environment and know how to manually add **libraries** to it.*
 
-## Also See
-
-I have built a number of devices based on this library.  They may be useful
-for understanding more about how to use it.  Please see the
-following repositories for more information:
-
-- **[bilgeAlarm](https://github.com/phorton1/Arduino-bilgeAlarm)** - a device to monitor and control two bilge pumps on a sailboat that includes a car alarm if things go wrong
-- **[theClock](https://github.com/phorton1/Arduino-theClock)** - my original laser cut wooden gear clock with a magnetic pendulum
-- **[theClock3](https://github.com/phorton1/Arduino-theClock3)** - a *better*, **more accurate** electromagnetic wooden geared clock
-
 
 ## License
 
