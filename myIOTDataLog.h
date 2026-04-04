@@ -57,6 +57,9 @@ public:
 		int num_cols,					// number of columns and
 		logColumn_t *cols);				// column types determine m_rec_size
 
+	const char *getName() const { return m_name; }
+	int getRecSize() const { return m_rec_size; }
+
 	#if WITH_SD
 		String dataFilename();
 			// returns "name.datalog"
@@ -69,11 +72,22 @@ public:
 	//----------------------------------------
 	// chart support
 	//----------------------------------------
-	
+
 	String getChartHeader(int period, int with_degrees, const String *series_colors=NULL);
 
 	#if WITH_SD
 		String sendChartData(uint32_t secs_or_dt,bool since=false);
+
+		String scanFile();
+			// Returns JSON: num_recs, first_dt, last_dt, tombstones, out_of_order[], needs_compact
+		bool tombstoneByDt(uint32_t dt);
+			// Writes dt=0 to all records matching dt (delete by timestamp)
+		bool tombstoneByIndex(uint32_t idx);
+			// Writes dt=0 to the record at file index idx (delete by position)
+		bool compactFile();
+			// Rewrites file stripping all dt==0 tombstone records
+		bool trimBefore(uint32_t cutoff_dt);
+			// Rewrites file keeping only records with dt >= cutoff_dt (also strips tombstones)
 	#endif
 
 private:
@@ -96,8 +110,13 @@ private:
 
 #if WITH_SD
 
-	typedef bool (*SDBackardsCB)(uint32_t client_data, uint8_t *rec);
-		// return true if iteration should proceed, false otherwise
+	typedef enum {
+		ITER_INCLUDE = 0,	// include this record in results
+		ITER_SKIP    = 1,	// skip this record (tombstone), keep iterating
+		ITER_STOP    = 2,	// stop iteration (record is before cutoff)
+	} SDIterState_t;
+
+	typedef SDIterState_t (*SDBackardsCB)(uint32_t client_data, uint8_t *rec);
 
 	typedef struct {
 

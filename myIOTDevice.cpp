@@ -277,6 +277,7 @@ bool myIOTDevice::_plot_data = 0;
 
 #if WITH_SD
     bool   myIOTDevice::m_sd_started;
+    volatile bool myIOTDevice::m_suppress_log = false;
 #endif
 
 RTC_NOINIT_ATTR int myIOTDevice::m_boot_count;
@@ -1263,3 +1264,164 @@ void myIOTDevice::loop()
         }
     #endif
 }
+
+
+//---------------------------------------------------------------
+// Data Log Registration and base onCustomLink
+//---------------------------------------------------------------
+
+#if WITH_SD
+
+#include "myIOTDataLog.h"
+#include "myIOTWebServer.h"
+
+#define MAX_DATA_LOGS	4
+
+static myIOTDataLog		*s_data_logs[MAX_DATA_LOGS];
+static int				s_data_log_periods[MAX_DATA_LOGS];
+static int				s_data_log_degrees[MAX_DATA_LOGS];
+static const String		*s_data_log_colors[MAX_DATA_LOGS];
+static int				s_num_data_logs = 0;
+
+
+void myIOTDevice::addDataLog(myIOTDataLog *log, int default_period, int with_degrees, const String *series_colors)
+{
+	if (s_num_data_logs < MAX_DATA_LOGS)
+	{
+		int i = s_num_data_logs++;
+		s_data_logs[i]			= log;
+		s_data_log_periods[i]	= default_period;
+		s_data_log_degrees[i]	= with_degrees;
+		s_data_log_colors[i]	= series_colors;
+		LOGI("addDataLog(%s) period=%d degrees=%d", log->getName(), default_period, with_degrees);
+	}
+	else
+	{
+		LOGE("addDataLog() MAX_DATA_LOGS(%d) exceeded", MAX_DATA_LOGS);
+	}
+}
+
+#endif	// WITH_SD
+
+
+String myIOTDevice::onCustomLink(const String &path, const char **mime_type)
+{
+#if WITH_SD
+	String data_name = myiot_web_server->hasArg("data_name") ?
+		myiot_web_server->arg("data_name") : String("");
+
+	myIOTDataLog *log = NULL;
+	int log_idx = -1;
+	for (int i = 0; i < s_num_data_logs; i++)
+	{
+		if (data_name == s_data_logs[i]->getName())
+		{
+			log = s_data_logs[i];
+			log_idx = i;
+			break;
+		}
+	}
+
+	if (log)
+	{
+		if (path.startsWith("chart_header"))
+		{
+			*mime_type = "application/json";
+			return log->getChartHeader(
+				s_data_log_periods[log_idx],
+				s_data_log_degrees[log_idx],
+				s_data_log_colors[log_idx]);
+		}
+		else if (path.startsWith("chart_data"))
+		{
+			uint32_t secs = myiot_web_server->getArg("secs", 0);
+			return log->sendChartData(secs);
+		}
+		else if (path.startsWith("update_chart_data"))
+		{
+			uint32_t since = myiot_web_server->getArg("since", 0);
+			return log->sendChartData(since, true);
+		}
+		else if (path.startsWith("scan_datalog"))
+		{
+			*mime_type = "application/json";
+			return log->scanFile();
+		}
+		else if (path.startsWith("delete_record"))
+		{
+			uint32_t dt = myiot_web_server->getArg("dt", 0);
+			if (!dt) return "";
+			m_suppress_log = true;
+			bool ok = log->tombstoneByDt(dt);
+			m_suppress_log = false;
+			*mime_type = "application/json";
+			return ok ? "{\"ok\":true}" : "{\"ok\":false}";
+		}
+		else if (path.startsWith("delete_out_of_order"))
+		{
+			String indices_str = myiot_web_server->hasArg("indices") ?
+				myiot_web_server->arg("indices") : String("");
+			if (!indices_str.length()) return "";
+			m_suppress_log = true;
+			bool ok = true;
+			int start = 0;
+			while (start <= (int)indices_str.length())
+			{
+				int comma = indices_str.indexOf(',', start);
+				String idx_str = (comma >= 0) ?
+					indices_str.substring(start, comma) :
+					indices_str.substring(start);
+				if (idx_str.length())
+				{
+					uint32_t idx = (uint32_t)idx_str.toInt();
+					if (!log->tombstoneByIndex(idx))
+						ok = false;
+				}
+				if (comma < 0) break;
+				start = comma + 1;
+			}
+			m_suppress_log = false;
+			*mime_type = "application/json";
+			return ok ? "{\"ok\":true}" : "{\"ok\":false}";
+		}
+		else if (path.startsWith("trim_before"))
+		{
+			uint32_t dt = myiot_web_server->getArg("dt", 0);
+			if (!dt) return "";
+			m_suppress_log = true;
+			bool ok = log->trimBefore(dt);
+			m_suppress_log = false;
+			*mime_type = "application/json";
+			return ok ? "{\"ok\":true}" : "{\"ok\":false}";
+		}
+		else if (path.startsWith("compact_datalog"))
+		{
+			m_suppress_log = true;
+			bool ok = log->compactFile();
+			m_suppress_log = false;
+			*mime_type = "application/json";
+			return ok ? "{\"ok\":true}" : "{\"ok\":false}";
+		}
+		else if (path.startsWith("delete_spike"))
+		{
+			uint32_t start_idx = myiot_web_server->getArg("start_idx", 0);
+			uint32_t end_idx   = myiot_web_server->getArg("end_idx",   0);
+			if (end_idx < start_idx) return "";
+			m_suppress_log = true;
+			bool ok = true;
+			for (uint32_t idx = start_idx; idx <= end_idx; idx++)
+			{
+				if (!log->tombstoneByIndex(idx))
+					ok = false;
+			}
+			m_suppress_log = false;
+			*mime_type = "application/json";
+			return ok ? "{\"ok\":true}" : "{\"ok\":false}";
+		}
+	}
+#endif	// WITH_SD
+
+	return "";
+}
+
+

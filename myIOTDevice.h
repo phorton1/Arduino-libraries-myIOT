@@ -112,6 +112,11 @@ typedef struct {
 }   myIOTWidget_t;
 
 
+#if WITH_SD
+	class myIOTDataLog;		// forward declaration for addDataLog()
+#endif
+
+
 class myIOTDevice
 {
     public:
@@ -204,6 +209,12 @@ class myIOTDevice
         static bool   _plot_data;
             // true if plotting should take place
 
+        #if WITH_SD
+            static volatile bool m_suppress_log;
+                // set true during maintenance operations to suppress addRecord()
+            void addDataLog(myIOTDataLog *log, int default_period=86400, int with_degrees=0, const String *series_colors=NULL);
+        #endif
+
         
         // Values
 
@@ -285,7 +296,7 @@ class myIOTDevice
 
         // miscellaneous called internally, virtualized methods for derived class
 
-        virtual String onCustomLink(const String &path, const char **mime_type) { return ""; }
+        virtual String onCustomLink(const String &path, const char **mime_type);
             // Web requests to /custom/blah will call this with path='blah'
             // and the address of a pointer to a const char * mime_type.
             // The default mime_type is "text/html".

@@ -197,6 +197,12 @@ void myIOTDataLog::dbg_rec(const logRecord_t rec)
 		}
 		*((uint32_t *)rec) = tm;
 
+		if (myIOTDevice::m_suppress_log)
+		{
+			LOGD("myIOTDataLog::addRecord() suppressed during maintenance");
+			return true;
+		}
+
 		String filename = dataFilename();
 		File file = SD.open(filename, FILE_APPEND);
 		if (!file)
@@ -259,6 +265,11 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 	addJsonVal(rslt,"rec_size",String(m_rec_size),false,true,true);
 	addJsonVal(rslt,"num_cols",String(m_num_cols),false,true,true);
 	addJsonVal(rslt,"default_period",String(period),false,true,true);
+	#if WITH_SD
+	addJsonVal(rslt,"has_file","true",false,true,true);
+	#else
+	addJsonVal(rslt,"has_file","false",false,true,true);
+	#endif
 	addJsonVal(rslt,"with_degrees",String(with_degrees),false,true,true);
 	if (with_degrees)
 	{
@@ -445,25 +456,31 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 		if (iter->chunked)
 		{
 			uint8_t *retval = NULL;
-			bool condition = true;
-			while (condition && iter->buf_idx >= 0)
+			bool running = true;
+			while (running && iter->buf_idx >= 0)
 			{
 				uint8_t *rec = iter->buffer + (iter->rec_size * iter->buf_idx--);
-				condition = iter->record_fxn(iter->client_data,rec);
-				if (condition)
+				SDIterState_t state = iter->record_fxn(iter->client_data, rec);
+				if (state == ITER_INCLUDE)
 				{
 					(*num_recs)++;
 					retval = rec;
 				}
-			}
-
-			if (!condition)
-			{
-				#if DEBUG_ITER
-					LOGD("iteration ended by condition at buf_idx(%d)",iter->buf_idx);
-				#endif
-				iter->done = 1;
-				iter->file.close();
+				else if (state == ITER_STOP)
+				{
+					running = false;
+					#if DEBUG_ITER
+						LOGD("iteration ended by STOP at buf_idx(%d)",iter->buf_idx);
+					#endif
+					iter->done = 1;
+					iter->file.close();
+				}
+				else	// ITER_SKIP (tombstone)
+				{
+					if (*num_recs > 0)
+						running = false;	// end current batch at tombstone to preserve contiguity
+					// else: no batch started yet, skip and continue
+				}
 			}
 
 			#if DEBUG_ITER
@@ -472,20 +489,28 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 
 			return retval;
 		}
-		else
+		else	// non-chunked: return one record per call, skip tombstones
 		{
-			*num_recs = 1;
-			uint8_t *rec = iter->buffer + (iter->rec_size * iter->buf_idx--);
-			bool condition = iter->record_fxn(iter->client_data,rec);
-			if (condition)
-				return rec;
+			while (iter->buf_idx >= 0)
+			{
+				uint8_t *rec = iter->buffer + (iter->rec_size * iter->buf_idx--);
+				SDIterState_t state = iter->record_fxn(iter->client_data, rec);
+				if (state == ITER_INCLUDE)
+				{
+					*num_recs = 1;
+					return rec;
+				}
+				if (state == ITER_STOP)
+				{
+					iter->done = 1;
+					iter->file.close();
+					return NULL;
+				}
+				// ITER_SKIP: continue loop
+			}
+			// Buffer exhausted without INCLUDE or STOP - caller will load next buffer
+			return NULL;
 		}
-
-		// iteration ended by user condition
-
-		iter->done = 1;
-		iter->file.close();
-		return NULL;
 	}
 
 
@@ -495,20 +520,22 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 	// Usually single instance, debugging of static method
 	// uses global for multiple instances
 
-	bool chartDataCondition(uint32_t cutoff, uint8_t *rec)
+	SDIterState_t chartDataCondition(uint32_t cutoff, uint8_t *rec)
 	{
 		uint32_t ts = *((uint32_t *) rec);
+		if (ts == 0)
+			return ITER_SKIP;		// tombstoned record
 		if (ts >= cutoff)
-			return true;
+			return ITER_INCLUDE;
 
 		#if DEBUG_SEND_DATA>2
 		{
 			String dt1 = timeToString(ts);
 			String dt2 = timeToString(cutoff);
-			LOGD("    chartDataCondition(FALSE) at %s < %s",dt1.c_str(),dt2.c_str());
+			LOGD("    chartDataCondition(STOP) at %s < %s",dt1.c_str(),dt2.c_str());
 		}
 		#endif
-		return false;
+		return ITER_STOP;
 	}
 
 
@@ -588,6 +615,317 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 
 		return RESPONSE_HANDLED;
 	}
+
+
+	//-----------------------------------------
+	// scanFile()
+	//-----------------------------------------
+
+	String myIOTDataLog::scanFile()
+	{
+		String filename = dataFilename();
+		File file = SD.open(filename.c_str(), FILE_READ);
+		if (!file)
+		{
+			LOGE("scanFile() could not open %s", filename.c_str());
+			return "";
+		}
+
+		uint32_t size = file.size();
+		if (!size)
+		{
+			file.close();
+			return "{\"num_recs\":0,\"first_dt\":0,\"last_dt\":0,\"tombstones\":0,\"spikes\":[],\"needs_compact\":false}";
+		}
+
+		// Chunked forward read — one SD read per chunk instead of one seek
+		// per record.  Only the backward spike-walk uses individual seeks.
+		#define SCAN_BASE_BUF  1024
+		int      buf_size = ((SCAN_BASE_BUF + m_rec_size - 1) / m_rec_size) * m_rec_size;
+		uint8_t  stack_buffer[buf_size];
+
+		uint32_t num_recs    = size / m_rec_size;
+		uint32_t tombstones  = 0;
+		uint32_t first_dt    = 0;
+		uint32_t last_dt     = 0;
+		uint32_t prev_dt     = 0;
+		String   spikes_json = "[";
+		bool     first_spike = true;
+
+		// How far back to walk when characterising a spike (individual seeks).
+		#define MAX_SPIKE_LOOK 100
+
+		uint32_t file_offset = 0;
+		uint32_t rec_idx     = 0;
+
+		while (file_offset < size)
+		{
+			int to_read = (int)min((uint32_t)buf_size, size - file_offset);
+			to_read = (to_read / m_rec_size) * m_rec_size;
+			if (to_read == 0) break;
+
+			if (!file.seek(file_offset)) break;
+			int got = file.read(stack_buffer, to_read);
+			if (got <= 0) break;
+
+			int recs_in_chunk = got / m_rec_size;
+			for (int r = 0; r < recs_in_chunk; r++, rec_idx++)
+			{
+				uint32_t dt;
+				memcpy(&dt, stack_buffer + r * m_rec_size, 4);
+
+				if (dt == 0) { tombstones++; continue; }
+				if (!first_dt) first_dt = dt;
+				last_dt = dt;
+
+				if (prev_dt && dt < prev_dt)
+				{
+					// Drop-back: walk backward (individual seeks) to find spike extent.
+					uint32_t resume_dt       = dt;
+					uint32_t spike_end_idx   = rec_idx - 1;
+					uint32_t spike_start_idx = rec_idx - 1;
+					uint32_t spike_first_dt  = prev_dt;
+					uint32_t spike_last_dt   = prev_dt;
+					uint32_t before_spike_dt = 0;
+
+					int32_t j    = (int32_t)rec_idx - 1;
+					int     look = 0;
+					while (j >= 0 && look < MAX_SPIKE_LOOK)
+					{
+						file.seek((uint32_t)j * m_rec_size);
+						uint32_t jdt;
+						if (file.read((uint8_t *)&jdt, 4) != 4) break;
+						if (jdt == 0) { j--; look++; continue; }
+						if (jdt <= resume_dt)
+						{
+							before_spike_dt = jdt;
+							spike_start_idx = (uint32_t)(j + 1);
+							break;
+						}
+						spike_first_dt  = jdt;
+						spike_start_idx = (uint32_t)j;
+						j--;
+						look++;
+					}
+
+					uint32_t spike_count = spike_end_idx - spike_start_idx + 1;
+					if (!first_spike) spikes_json += ",";
+					spikes_json += "{";
+					spikes_json += "\"start_idx\":"  + String(spike_start_idx) + ",";
+					spikes_json += "\"end_idx\":"    + String(spike_end_idx)   + ",";
+					spikes_json += "\"count\":"      + String(spike_count)     + ",";
+					spikes_json += "\"first_dt\":"   + String(spike_first_dt)  + ",";
+					spikes_json += "\"last_dt\":"    + String(spike_last_dt)   + ",";
+					spikes_json += "\"prev_dt\":"    + String(before_spike_dt) + ",";
+					spikes_json += "\"next_dt\":"    + String(resume_dt);
+					spikes_json += "}";
+					first_spike = false;
+				}
+
+				prev_dt = dt;
+			}
+
+			file_offset += got;
+		}
+
+		file.close();
+		spikes_json += "]";
+
+		String result = "{";
+		result += "\"num_recs\":"      + String(num_recs)   + ",";
+		result += "\"first_dt\":"      + String(first_dt)   + ",";
+		result += "\"last_dt\":"       + String(last_dt)    + ",";
+		result += "\"tombstones\":"    + String(tombstones) + ",";
+		result += "\"spikes\":"        + spikes_json        + ",";
+		result += "\"needs_compact\":" + String(tombstones > 0 ? "true" : "false");
+		result += "}";
+		return result;
+	}
+
+
+	//-----------------------------------------
+	// tombstoneByDt()
+	//-----------------------------------------
+
+	bool myIOTDataLog::tombstoneByDt(uint32_t dt)
+	{
+		String filename = dataFilename();
+		File file = SD.open(filename.c_str(), "r+");
+		if (!file)
+		{
+			LOGE("tombstoneByDt() could not open %s", filename.c_str());
+			return false;
+		}
+
+		// Chunked forward read to find matching records, then seek back only
+		// to write the tombstone (dt=0).  ~1075 reads instead of 100K seeks.
+		#define TOMB_BASE_BUF  1024
+		int     buf_size = ((TOMB_BASE_BUF + m_rec_size - 1) / m_rec_size) * m_rec_size;
+		uint8_t stack_buffer[buf_size];
+
+		uint32_t size       = file.size();
+		uint32_t file_offset = 0;
+		uint32_t rec_idx    = 0;
+		bool     found      = false;
+		const uint32_t zero = 0;
+
+		while (file_offset < size)
+		{
+			int to_read = (int)min((uint32_t)buf_size, size - file_offset);
+			to_read = (to_read / m_rec_size) * m_rec_size;
+			if (to_read == 0) break;
+
+			if (!file.seek(file_offset)) break;
+			int got = file.read(stack_buffer, to_read);
+			if (got <= 0) break;
+
+			int recs_in_chunk = got / m_rec_size;
+			for (int r = 0; r < recs_in_chunk; r++, rec_idx++)
+			{
+				uint32_t rec_dt;
+				memcpy(&rec_dt, stack_buffer + r * m_rec_size, 4);
+				if (rec_dt == dt)
+				{
+					uint32_t write_pos = file_offset + r * m_rec_size;
+					file.seek(write_pos);
+					file.write((uint8_t *)&zero, 4);
+					found = true;
+				}
+			}
+
+			file_offset += got;
+		}
+
+		file.close();
+		LOGI("tombstoneByDt(%u) found=%d", dt, found);
+		return found;
+	}
+
+
+	//-----------------------------------------
+	// tombstoneByIndex()
+	//-----------------------------------------
+
+	bool myIOTDataLog::tombstoneByIndex(uint32_t idx)
+	{
+		String filename = dataFilename();
+		File file = SD.open(filename.c_str(), "r+");
+		if (!file)
+		{
+			LOGE("tombstoneByIndex() could not open %s", filename.c_str());
+			return false;
+		}
+
+		uint32_t num_recs = file.size() / m_rec_size;
+		if (idx >= num_recs)
+		{
+			LOGE("tombstoneByIndex(%u) out of range (%u recs)", idx, num_recs);
+			file.close();
+			return false;
+		}
+
+		const uint32_t zero = 0;
+		bool ok = file.seek(idx * m_rec_size) &&
+				  (file.write((uint8_t *)&zero, 4) == 4);
+		file.close();
+		LOGI("tombstoneByIndex(%u) ok=%d", idx, ok);
+		return ok;
+	}
+
+
+	//-----------------------------------------
+	// compactFile() / trimBefore()
+	//-----------------------------------------
+
+	static bool rewriteFile(myIOTDataLog *log, uint32_t cutoff_dt)
+		// Rewrite the datalog keeping records where dt!=0 && dt>=cutoff_dt.
+		// cutoff_dt==0 means compact only (keep all non-tombstone records).
+		//
+		// Uses two chunked buffers: read a chunk from src, filter into a write
+		// buffer, flush the write buffer when full or at end.  ~1075 SD reads
+		// and proportionally fewer writes instead of one seek per record.
+	{
+		String filename = log->dataFilename();
+		String tmpname = "/" + String(log->getName()) + ".tmp";
+
+		File src = SD.open(filename.c_str(), FILE_READ);
+		if (!src)
+		{
+			LOGE("rewriteFile() could not open %s", filename.c_str());
+			return false;
+		}
+
+		if (SD.exists(tmpname.c_str()))
+			SD.remove(tmpname.c_str());
+
+		File dst = SD.open(tmpname.c_str(), FILE_WRITE);
+		if (!dst)
+		{
+			LOGE("rewriteFile() could not create %s", tmpname.c_str());
+			src.close();
+			return false;
+		}
+
+		int rec_size = log->getRecSize();
+		#define RW_BASE_BUF 1024
+		int buf_size = ((RW_BASE_BUF + rec_size - 1) / rec_size) * rec_size;
+
+		uint8_t read_buf[buf_size];
+		uint8_t write_buf[buf_size];
+		int write_fill = 0;   // bytes accumulated in write_buf
+		int written    = 0;   // records written
+
+		int got;
+		while ((got = src.read(read_buf, buf_size)) > 0)
+		{
+			int recs = (got / rec_size) * rec_size;  // ignore partial trailing bytes
+			for (int off = 0; off < recs; off += rec_size)
+			{
+				uint32_t dt;
+				memcpy(&dt, read_buf + off, 4);
+				if (dt == 0 || (cutoff_dt != 0 && dt < cutoff_dt))
+					continue;
+
+				memcpy(write_buf + write_fill, read_buf + off, rec_size);
+				write_fill += rec_size;
+				written++;
+
+				if (write_fill == buf_size)
+				{
+					dst.write(write_buf, write_fill);
+					write_fill = 0;
+				}
+			}
+		}
+
+		if (write_fill > 0)
+			dst.write(write_buf, write_fill);
+
+		src.close();
+		dst.close();
+
+		SD.remove(filename.c_str());
+		if (!SD.rename(tmpname.c_str(), filename.c_str()))
+		{
+			LOGE("rewriteFile() rename failed");
+			return false;
+		}
+
+		LOGI("rewriteFile(%s cutoff=%u) wrote %d records", log->getName(), cutoff_dt, written);
+		return true;
+	}
+
+
+	bool myIOTDataLog::compactFile()
+	{
+		return rewriteFile(this, 0);
+	}
+
+	bool myIOTDataLog::trimBefore(uint32_t cutoff_dt)
+	{
+		return rewriteFile(this, cutoff_dt);
+	}
+
 
 #endif	// WITH_SD
 
