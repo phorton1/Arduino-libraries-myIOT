@@ -22,9 +22,9 @@
 #define LOG_COL_TYPE_UINT8			0x00000004
 #define LOG_COL_TYPE_UINT8x10		0x00000008	// 0..2550 stored as 0..255
 
-#define LOG_COL_TYPE_INT32			0x00000010	// full signed 32 bit
-#define LOG_COL_TYPE_INT16			0x00000020	// full signed 32 bit
-#define LOG_COL_TYPE_INT8			0x00000040	// full signed 32 bit
+#define LOG_COL_TYPE_INT32			0x00000010	// signed 32 bit
+#define LOG_COL_TYPE_INT16			0x00000020	// signed 16 bit
+#define LOG_COL_TYPE_INT8			0x00000040	// signed 8 bit
 
 #define LOG_COL_TYPE_FLOAT32		0x00000100	// full 32 bit float (unused)
 
@@ -33,6 +33,8 @@
 #define LOG_COL_TYPE_CENTIGRADE32	0x00001000	// full 32 bit float in Centigrade
 #define LOG_COL_TYPE_CENTIGRADE_RAW	0x00002000	// int16_t 16 bit Centigrade/128 (raw DS18B20 reading)
 #define LOG_COL_TYPE_CENTIGRADE8	0x00004000	// integer Centigrade bias 40; i.e. 40=0C; min=-40C; max=215C,
+
+#define LOG_COL_TYPE_INT16_10	    0x00008000	// -327.6..327.6 stored as x10 int16 integer (used for volts)
 
 
 

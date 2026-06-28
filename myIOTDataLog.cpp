@@ -68,7 +68,8 @@ static int colSize(uint32_t typ)
 		return 1;
 	if (typ == LOG_COL_TYPE_UINT16 ||
 		typ == LOG_COL_TYPE_INT16 ||
-		typ == LOG_COL_TYPE_CENTIGRADE_RAW)
+		typ == LOG_COL_TYPE_CENTIGRADE_RAW ||
+		typ == LOG_COL_TYPE_INT16_10)
 		return 2;
 	// type == LOG_COL_TYPE_UINT32
 	// type == LOG_COL_TYPE_INT32
@@ -161,6 +162,13 @@ void myIOTDataLog::dbg_rec(const logRecord_t rec)
 			uint8_t val = *((uint8_t*)&rec[offset]);
 			offset += 1;
 			LOGD("   %-15s = %d",m_col[i].name,val-40);
+		}
+		else if (col_type == LOG_COL_TYPE_INT16_10)
+		{
+			float val = *((int16_t*)&rec[offset]);
+			val /= 10;
+			offset += 2;
+			LOGD("   %-15s = %0.1f",m_col[i].name,val-40);
 		}
 		else	// UINT32_t
 		{
@@ -299,8 +307,8 @@ String myIOTDataLog::getChartHeader(int period, int with_degrees, const String *
 			col->type == LOG_COL_TYPE_CENTIGRADE32		? "centigrade32_t" :
 			col->type == LOG_COL_TYPE_CENTIGRADE_RAW	? "centigradeRaw_t" :
 			col->type == LOG_COL_TYPE_CENTIGRADE8		? "centigrade8_t" :
+			col->type == LOG_COL_TYPE_INT16_10			? "int16div10_t" :
 			"uint32_t";
-
 		addJsonVal(rslt,"name",col->name,							true,true,false);
 		addJsonVal(rslt,"type",str,									true,true,false);
 		addJsonVal(rslt,"tick_interval",String(col->tick_interval),	false,false,true);
