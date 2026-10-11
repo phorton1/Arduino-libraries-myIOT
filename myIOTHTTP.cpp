@@ -443,6 +443,170 @@ void myIOTHTTP::handle_captive()
 }
 
 
+//---------------------------------------------------------
+// handle_values - generic HTTP access to the myIOTValues
+//---------------------------------------------------------
+// Uses the same json as the WebSockets:
+//
+//    GET  /values                 all values (as the WS value_list command)
+//    GET  /values/ID              one value (as myIOTValue::getAsJson())
+//    POST /values/ID              set the value, from a "value" form/query
+//                                 argument or a json body {"value":"xxx"}
+//    POST /values/ID/invoke       invoke a VALUE_TYPE_COMMAND
+//
+// Passwords are masked ("********") by getAsString(), so they are never
+// returned, but they may be set. Sets use VALUE_STORE_WS, so all the
+// invariants (READONLY, type, range, enum, required) are enforced by
+// myIOTValue and the change is published to WebSockets and MQTT as usual.
+// Errors are returned as {"error":"msg"} with a 4xx status.
+
+#if WITH_WS
+
+    #define PASSWORD_MASK   "********"
+
+    static void sendValuesJson(int code, const String &json)
+    {
+        web_server.send(code, "application/json", json);
+    }
+
+    static void sendValuesError(int code, String msg)
+    {
+        msg.replace("\\","/");
+        msg.replace("\"","'");
+        sendValuesJson(code,"{\"error\":\"" + msg + "\"}");
+    }
+
+    static void handle_values(const String &path)
+    {
+        HTTPMethod method = web_server.method();
+        LOGD("handle_values(%s) method=%d",path.c_str(),(int) method);
+
+        String id = path.substring(7);      // strip "/values"
+        if (id.startsWith("/"))
+            id = id.substring(1);
+
+        bool do_invoke = false;
+        if (id.endsWith("/invoke"))
+        {
+            do_invoke = true;
+            id = id.substring(0,id.length() - 7);
+        }
+
+        // all values
+
+        if (id == "")
+        {
+            if (do_invoke || method != HTTP_GET)
+            {
+                web_server.sendHeader("Allow","GET");
+                sendValuesError(405,"method not allowed");
+                return;
+            }
+            sendValuesJson(200,my_iot_device->valueListJson());
+            return;
+        }
+
+        // find the value
+
+        myIOTValue *value = NULL;
+        try
+        {
+            value = my_iot_device->findValueById(id.c_str());
+        }
+        catch (String e)
+        {
+            sendValuesError(404,"unknown value(" + id + ")");
+            return;
+        }
+
+        // get one value
+
+        if (method == HTTP_GET && !do_invoke)
+        {
+            sendValuesJson(200,value->getAsJson());
+            return;
+        }
+        if (method != HTTP_POST)
+        {
+            web_server.sendHeader("Allow",do_invoke ? "POST" : "GET, POST");
+            sendValuesError(405,"method not allowed");
+            return;
+        }
+
+        // invoke a command
+
+        if (do_invoke)
+        {
+            try
+            {
+                value->invoke();
+            }
+            catch (String e)
+            {
+                sendValuesError(400,e);
+                return;
+            }
+            sendValuesJson(200,"{\"id\":\"" + String(value->getId()) + "\",\"invoked\":1}");
+            return;
+        }
+
+        // set a value
+
+        if (value->getType() == VALUE_TYPE_COMMAND)
+        {
+            sendValuesError(400,"value(" + id + ") is a command; use /values/" + id + "/invoke");
+            return;
+        }
+
+        String new_value;
+        if (web_server.hasArg("value"))
+        {
+            new_value = web_server.arg("value");
+        }
+        else if (web_server.hasArg("plain"))
+        {
+            StaticJsonDocument<255> doc;
+            if (deserializeJson(doc,web_server.arg("plain")) != DeserializationError::Ok ||
+                doc["value"].isNull())
+            {
+                sendValuesError(400,"body must be json like {\"value\":\"xxx\"}");
+                return;
+            }
+            if (doc["value"].is<bool>())
+                new_value = doc["value"].as<bool>() ? "1" : "0";
+            else
+                new_value = doc["value"].as<String>();
+        }
+        else
+        {
+            sendValuesError(400,"missing value argument");
+            return;
+        }
+
+        // a client that reads a masked password and writes it back
+        // must not overwrite the real password with the mask
+
+        if ((value->getStyle() & VALUE_STYLE_PASSWORD) && new_value == PASSWORD_MASK)
+        {
+            sendValuesError(400,"refusing to set a password to the mask value");
+            return;
+        }
+
+        try
+        {
+            value->setFromString(new_value.c_str(),VALUE_STORE_WS);
+        }
+        catch (String e)
+        {
+            sendValuesError(400,e);
+            return;
+        }
+        sendValuesJson(200,value->getAsJson());
+    }
+
+#endif  // WITH_WS
+
+
 void myIOTHTTP::handle_request()
 {
     String path = web_server.urlDecode(web_server.uri());
@@ -517,6 +681,16 @@ void myIOTHTTP::handle_request()
     //----------------------------------------------------
     // normal behavior from here down
     //----------------------------------------------------
+    // generic HTTP get/set/invoke of values
+
+    #if WITH_WS
+        else if (path == "/values" || path.startsWith("/values/"))
+        {
+            handle_values(path);
+            return;
+        }
+    #endif
+
     // custom links
     // could be expanded to have a mime_type and use a buffer of some sort
 

@@ -1097,7 +1097,7 @@ void myIOTDevice::disableClass(const char *class_name, bool disabled)
         rslt += addIdList("dash_items",m_dash_items);
         rslt += addIdList("config_items",m_config_items);
         rslt += addIdList("device_items",m_device_items);
-        rslt += ",\n\"disabled_classes:\":\"" + m_disabled_classes + "\"\n";
+        rslt += ",\n\"disabled_classes\":\"" + m_disabled_classes + "\"\n";
 
         addToolTips(rslt);
 

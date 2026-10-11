@@ -274,6 +274,53 @@ one of the values:
 ![LogLevelDropdown.jpg](images/LogLevelDropdown.jpg)
 
 
+### 7. HTTP Access to Values
+
+In addition to the WebSockets (WebUI), every myIOT device exposes its values
+over plain HTTP (port 80), so that scripts and tools like **curl** can read
+and change them without a WebSocket client. The JSON is the same JSON that the
+WebUI uses:
+
+```
+GET  /values                 all values (same as the WebSocket value_list command)
+GET  /values/ID              one value
+POST /values/ID              set a value
+POST /values/ID/invoke       invoke a command
+```
+
+Examples:
+
+```
+curl http://<device-ip>/values
+curl http://<device-ip>/values/AIRCO_STATE
+curl -X POST -d "value=1" http://<device-ip>/values/SOME_BOOL
+curl -X POST -H "Content-Type: application/json" -d "{\"value\":\"42\"}" http://<device-ip>/values/SOME_INT
+curl -X POST http://<device-ip>/values/SOME_COMMAND/invoke
+```
+
+The value of a set is given either as a **value** form (or query) argument, or in a
+JSON body like **{"value":"xxx"}**. Value IDs are not case sensitive. A successful set returns the
+JSON for the changed value; a successful invoke returns **{"id":"ID","invoked":1}**.
+
+Sets are performed as if they came from the WebSockets (VALUE_STORE_WS), so all of the
+normal rules apply: READONLY values cannot be modified, and the type, range, enum, and
+required checks are enforced. Changes are published to the WebSockets (an open WebUI
+updates live) and to MQTT as usual. Failures are returned as
+**{"error":"message"}** with a status of 400 (bad request), 404 (unknown value),
+or 405 (wrong method).
+
+Password values (VALUE_STYLE_PASSWORD) are returned as `********`, as they are
+everywhere else, but they *can* be set. A set whose value is exactly the mask is
+refused, so a script that reads a value and writes it back cannot overwrite a real
+password. Note that the device HTTP server has no authentication and no encryption, so
+passwords and commands sent this way are in clear text on the local network. When the
+device is accessed through the myIOTServer, the myIOTServer provides HTTPS and
+authentication.
+
+Invoking a command that reboots the device may drop the connection before the
+response is sent.
+
+
 ## B. Breaking down the testDevice.ino program
 
 So, armed with all of that, let's break down every line of the **testDevice.ino** program
